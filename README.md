@@ -1,0 +1,3 @@
+# WASM Node Editor
+
+This repository contains a graphical node-editor based on [imnodes](https://github.com/Nelarius/imnodes "A small, dependency-free node editor for dear imgui") and [Dear ImGui](https://github.com/ocornut/imgui "Dear ImGui: Bloat-free Graphical User interface for C++ with minimal dependencies") that is compiled to WASM using [Emscripten](https://github.com/emscripten-core/emsdk "Emscripten SDK") + [CMake](https://cmake.org/ "CMake is an open-source, cross-platform family of tools designed to build, test and package software") so that it can run in a browser. The node editor also provides js bindings on both the client and server side to allow this graph to manipulate client or server side graphs.
