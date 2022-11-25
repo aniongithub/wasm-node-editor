@@ -1,6 +1,8 @@
 const express = require('express')
 const http = require('http');
 
+express.static.mime.define({'text/javascript': ['js']});
+
 const app = express();
 const httpServer = http.createServer(app);
 app.use('/', express.static('client'));
