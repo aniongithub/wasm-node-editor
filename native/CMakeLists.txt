@@ -5,8 +5,6 @@ set(OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED CONFIG)
 
-add_definitions(-std=c++11 -O3)
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ../src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES}
 	"$ENV{IMGUI_ROOT}/imgui.cpp"

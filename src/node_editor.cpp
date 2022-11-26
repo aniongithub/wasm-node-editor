@@ -7,6 +7,7 @@
 #include <imnodes.h>
 #include <imgui.h>
 #include <sstream>
+#include <iostream>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -30,7 +31,7 @@ bool popup = false;
 ImVec2 nextNodePos = ImVec2(-1, -1);
 std::vector<std::string> nodes;
 json nodes_data;
-json createNodeMenu_data;
+json createNodeMenu_data = {};
 ImNodesContext* imnodes_ctx;
 
 void initializeNodeEditor()
@@ -43,50 +44,67 @@ void registerNodes(std::string json_data)
 {
     auto stream = std::stringstream(json_data);
     nodes_data = json::parse(stream);
-    for (auto it = nodes_data.begin(); it < nodes_data.end(); it++)
+    for (auto it = nodes_data.begin(); it != nodes_data.end(); it++)
     {
         std::stringstream id(it.key());
         std::string id_segment;
-        auto curr = createNodeMenu_data;
+        json* curr = &createNodeMenu_data;
         
         while (std::getline(id, id_segment, '/'))
         {
-            curr[id_segment] = {};
-            curr = curr[id_segment];
+            if (!curr->contains(id_segment))
+                (*curr)[id_segment] = {};
+            curr = &((*curr)[id_segment]);
         }
+        *curr = it.key();
     }
+    std::cout << createNodeMenu_data.dump(4) << std::endl;
 }
 
-static int renderNode(const char* title, const std::vector<const char*>& inputs, const std::vector<const char*>& outputs)
+static int renderNode(const char* node_id, const std::vector<const char*>& inputs, const std::vector<const char*>& outputs)
 {
-    auto node_id = id++;
-    ImNodes::BeginNode(node_id);
+    auto int_id = id++;
+    ImNodes::BeginNode(int_id);
 
     ImNodes::BeginNodeTitleBar();
 
-    ImGui::TextUnformatted(title);
+    auto idStream = std::stringstream(node_id);
+    std::string id_segment;
+    // Get the last part of the full node title
+    while (std::getline(idStream, id_segment, '/'));
+
+    ImGui::TextUnformatted(id_segment.c_str());
     ImNodes::EndNodeTitleBar();
 
     float maxInputTextSize = 0;
-    for (auto input: inputs)
-    {
-        ImNodes::BeginInputAttribute(id++);
-        ImGui::TextUnformatted(input);
-        ImNodes::EndInputAttribute();
+    assert(nodes_data.contains(node_id));
+    auto& node = nodes_data[node_id];
 
-        maxInputTextSize = max(maxInputTextSize, ImGui::CalcTextSize(input).x);
+    if (node.contains("inputs"))
+    {
+        for (auto it = node["inputs"].begin(); it != node["inputs"].end(); it++)
+        {
+            ImNodes::BeginInputAttribute(id++);
+            ImGui::TextUnformatted(it.key().c_str());
+            ImNodes::EndInputAttribute();
+
+            maxInputTextSize = max(maxInputTextSize, ImGui::CalcTextSize(it.key().c_str()).x);
+        }
     }
 
-    for (auto output: outputs)
+    if (node.contains("outputs"))
     {
-        ImNodes::BeginOutputAttribute(id++);
-        ImGui::Indent(maxInputTextSize + INPUT_OUTPUT_SPACING);
-        ImGui::TextUnformatted(output);
-        ImNodes::EndOutputAttribute();
+        for (auto it = node["outputs"].begin(); it != node["outputs"].end(); it++)
+        {
+            ImNodes::BeginOutputAttribute(id++);
+            ImGui::Indent(maxInputTextSize + INPUT_OUTPUT_SPACING);
+            ImGui::TextUnformatted(it.key().c_str());
+            ImNodes::EndOutputAttribute();
+        }
     }
 
     ImNodes::EndNode();
-    return node_id;
+    return int_id;
 }
 
 void createNode(const char* item, ImVec2 createPos)
@@ -96,24 +114,35 @@ void createNode(const char* item, ImVec2 createPos)
     popup = false;
 }
 
+void renderCreateNodeMenuItems(json data)
+{
+    for (auto it = data.begin(); it != data.end(); it++)
+    {
+        if (it.value().is_string())
+            if (ImGui::Selectable(it.key().c_str()))
+                createNode(it.value().get<std::string>().c_str(), ImGui::GetMousePos());
+        
+        if (!it.value().is_string())
+        {
+            if (ImGui::BeginMenu(it.key().c_str()))
+            {
+                renderCreateNodeMenuItems(it.value());
+                ImGui::EndMenu();
+            }
+        }
+    }
+}
+
 void renderCreateNodeMenu()
 {    
-    popup = (ImGui::IsMouseDown(ImGuiMouseButton_Right) || popup) && !ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsPopupOpen("foobar");
+    popup = (ImGui::IsMouseDown(ImGuiMouseButton_Right) || popup) && !ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsPopupOpen("createNodeMenu");
     if (popup)
     {
         ImGui::OpenPopup("createNodeMenu");
         popup = true;
         if (ImGui::BeginPopup("createNodeMenu"))
         {            
-            if (ImGui::Selectable("Foo")) createNode("Foo", ImGui::GetMousePos());
-            if (ImGui::Selectable("Bar")) createNode("Bar", ImGui::GetMousePos());
-            if (ImGui::BeginMenu("Baz"))
-            {
-                if (ImGui::Selectable("FooBaz")) createNode("FooBaz", ImGui::GetMousePos());
-                if (ImGui::Selectable("BarBaz")) createNode("BarBaz", ImGui::GetMousePos());
-                ImGui::EndMenu();
-            }
-
+            renderCreateNodeMenuItems(createNodeMenu_data);
             ImGui::EndPopup();
         }
     }
@@ -125,25 +154,7 @@ bool renderNodeEditor()
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
     ImGui::Begin("Node editor"); // Replace this with filename
 
-    popup = (ImGui::IsMouseDown(ImGuiMouseButton_Right) || popup) && !ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsPopupOpen("foobar");
-    if (popup)
-    {
-        ImGui::OpenPopup("foobar");
-        popup = true;
-        if (ImGui::BeginPopup("foobar"))
-        {            
-            if (ImGui::Selectable("Foo")) createNode("Foo", ImGui::GetMousePos());
-            if (ImGui::Selectable("Bar")) createNode("Bar", ImGui::GetMousePos());
-            if (ImGui::BeginMenu("Baz"))
-            {
-                if (ImGui::Selectable("FooBaz")) createNode("FooBaz", ImGui::GetMousePos());
-                if (ImGui::Selectable("BarBaz")) createNode("BarBaz", ImGui::GetMousePos());
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndPopup();
-        }
-    }
+    renderCreateNodeMenu();
 
     // reset our id counter
     id = 1;

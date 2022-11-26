@@ -140,27 +140,54 @@ int init_imgui()
     ImGui::CreateContext();
     
     initializeNodeEditor();
-    // registerNodes(R"(
-    // {
-    //     "time": {
-    //         "outputs": {
-    //             "time_sec": "float"
-    //         },
-    //     },
-    //     "math/sine": {
-    //         "inputs": {
-    //             "baseline": "float",
-    //             "phase": "float",
-    //             "amplitude": "float",
-    //             "frequencyHz": "float",
-    //             "x": "float"
-    //         },
-    //         "outputs": {
-    //             "y": "float"
-    //         }
-    //     }
-    // }
-    // )");
+    registerNodes(R"(
+    {
+        "time": {
+            "outputs": {
+                "time_sec": "float"
+            }
+        },
+        "math/sine": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "math/add": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        },
+        "math/subtract": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        },
+        "math/multiply": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        }
+    }
+    )");
 
 
     ImGui_ImplGlfw_InitForOpenGL(g_window, true);
