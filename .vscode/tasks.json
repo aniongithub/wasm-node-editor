@@ -1,19 +1,71 @@
 {
 	"version": "2.0.0",
 	"tasks": [
+		// native
 		{
 			"type": "cmake",
-			"label": "CMake: build",
+			"label": "configure native",
+			"command": "configure",
+			"targets": [
+				"node-editor-native"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"options": {
+				"environment": {
+					"CONFIGURE_EXTRA_ARGS": ""
+				}
+			},
+			"problemMatcher": [],
+		},
+		{
+			"type": "cmake",
+			"label": "build native",
 			"command": "build",
 			"targets": [
-				"all"
+				"node-editor-native"
 			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
 			},
 			"problemMatcher": [],
-			"detail": "CMake template build task"
+			"dependsOn": "configure native"
+		},
+		// wasm
+		{
+			"type": "cmake",
+			"label": "configure wasm",
+			"command": "configure",
+			"targets": [
+				"node-editor-wasm"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"options": {
+				"environment": {
+					"CONFIGURE_EXTRA_ARGS": "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/emscripten.cmake -DEMSCRIPTEN_ROOT_PATH=/usr/local/src/emsdk/upstream/emscripten -Wno-deprecated"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "cmake",
+			"label": "build wasm",
+			"command": "build",
+			"targets": [
+				"node-editor-wasm"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"dependsOn": "configure wasm"
 		}
 	]
 }
