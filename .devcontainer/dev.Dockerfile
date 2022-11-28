@@ -16,6 +16,7 @@ RUN apt-get update &&\
         cmake \
         python3 python3-pip \
         libglfw3-dev \
+        libboost-dev \
         xorg-dev \
         x11-apps
 
@@ -31,7 +32,7 @@ RUN cd /usr/local/src &&\
 RUN echo 'source "/usr/local/src/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile
 ENV EMSDK_ROOT="/usr/local/src/emsdk"
 
-ARG IMGUI_TAG=v1.89
+ARG IMGUI_TAG=docking
 WORKDIR /usr/local/src/imgui
 RUN cd /usr/local/src/ &&\
     git clone https://github.com/ocornut/imgui.git &&\

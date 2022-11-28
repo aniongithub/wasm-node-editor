@@ -138,6 +138,17 @@ int init_imgui()
     // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    // Setup style
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(g_window, true);
+    ImGui_ImplOpenGL3_Init();
+
+    resize_canvas();
     
     initializeNodeEditor();
     registerNodes(R"(
@@ -147,7 +158,44 @@ int init_imgui()
                 "time_sec": "float"
             }
         },
-        "math/sine": {
+        "functions/sine": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/square": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "dutyCycle": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/sawtooth": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/triangle": {
             "inputs": {
                 "baseline": "float",
                 "phase": "float",
@@ -188,17 +236,6 @@ int init_imgui()
         }
     }
     )");
-
-
-    ImGui_ImplGlfw_InitForOpenGL(g_window, true);
-    ImGui_ImplOpenGL3_Init();
-
-    // Setup style
-    ImGui::StyleColorsDark();
-
-    ImGuiIO &io = ImGui::GetIO();
-
-    resize_canvas();
 
     return 0;
 }
