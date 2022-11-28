@@ -1,13 +1,14 @@
 #pragma once
 
-#include <boost/bimap.hpp>
+#include <map>
 
 template <typename TKey, typename TId>
 class IdGenerator
 {
     private:
         TId _currId;
-        boost::bimap<TKey, TId> _bimap;
+        std::map<TKey, TId> _left;
+        std::map<TId, TKey> _right;    
     public:
         IdGenerator(TId idStart) 
             :_currId(idStart)
@@ -18,11 +19,12 @@ class IdGenerator
 
         bool getId(TKey key, TId& id)
         {
-            auto it = _bimap.left.find(key);
-            if (it == _bimap.left.end())
+            auto it = _left.find(key);
+            if (it == _left.end())
             {
                 id = _currId++;
-                _bimap.insert({key, id});
+                _left.insert({key, id});
+                _right.insert({id, key});
             }
             else
                 id = it->second;
@@ -32,8 +34,8 @@ class IdGenerator
 
         bool getKey(TId id, TKey& key)
         {
-            auto it = _bimap.right.find(id);
-            if (it == _bimap.right.end())
+            auto it = _right.find(id);
+            if (it == _right.end())
                 return false;
             else
             {
