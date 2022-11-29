@@ -82,22 +82,31 @@ void Node::render()
     ImGui::TextUnformatted(_name.c_str());
     ImNodes::EndNodeTitleBar();
 
-    auto input_it = _inputs.begin();
-    auto output_it = _outputs.begin();
-    for (auto i = 0; i < max(_inputs.size(), _outputs.size()); i++)
+    ImVec2 cell_padding(10, 3);
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+    if (ImGui::BeginTable(_name.c_str(), 2))
     {
-        auto input = input_it != _inputs.end() ? *input_it: InputPort::empty();
-        auto output = output_it != _outputs.end() ? *output_it: OutputPort::empty();
-        
-        ImGui::Unindent(_output_ports_offset);
-        input.render();
-        
-        ImGui::Indent(_output_ports_offset);
-        output.render();
+        ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("outputs", ImGuiTableColumnFlags_WidthFixed);
 
-        input_it++;
-        output_it++;
+        auto input_it = _inputs.begin();
+        auto output_it = _outputs.begin();
+        for (auto i = 0; i < max(_inputs.size(), _outputs.size()); i++)
+        {
+            auto input = input_it != _inputs.end() ? *input_it++: InputPort::empty();
+            auto output = output_it != _outputs.end() ? *output_it++: OutputPort::empty();
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            input.render();
+            
+            ImGui::TableNextColumn();
+            output.render();
+        }
+
+        ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
 
     ImNodes::EndNode();
 }
