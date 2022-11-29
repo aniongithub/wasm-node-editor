@@ -2,14 +2,39 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "native",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/native/node-editor-native",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description":  "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build native"
+        },
+        {
             "type": "node",
             "request": "launch",
-            "name": "Launch server",
+            "name": "wasm",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "program": "server/server.js",
-            "preLaunchTask": "CMake: build"
+            "preLaunchTask": "build wasm"
         }
     ]
 }

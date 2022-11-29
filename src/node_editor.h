@@ -1,8 +1,8 @@
 #pragma once
 
-namespace example
-{
-    void NodeEditorInitialize();
-    void NodeEditorShow();
-    void NodeEditorShutdown();
-} // namespace example
+#include <string>
+
+void initializeNodeEditor();
+void registerNodes(std::string json_data);
+bool renderNodeEditor();
+void shutdownNodeEditor();

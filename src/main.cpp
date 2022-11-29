@@ -2,12 +2,11 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#endif
-
 #define GLFW_INCLUDE_ES3
 #include <GLES3/gl3.h>
-#include <GLFW/glfw3.h>
+#endif
 
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imnodes.h>
 #include <backends/imgui_impl_glfw.h>
@@ -22,6 +21,8 @@ bool show_another_window = false;
 int g_width;
 int g_height;
 
+#ifdef __EMSCRIPTEN__
+
 EM_JS(int, canvas_get_width, (), {
     return Module.canvas.width;
 });
@@ -30,9 +31,39 @@ EM_JS(int, canvas_get_height, (), {
     return Module.canvas.height;
 });
 
-EM_JS(void, resizeCanvas, (), {
+EM_JS(void, resize_canvas, (), {
     js_resizeCanvas();
 });
+
+#else
+
+void on_size_changed();
+
+int canvas_get_width()
+{
+    int width, height;
+    glfwGetWindowSize(g_window, &width, &height);
+    return width;
+}
+
+int canvas_get_height()
+{
+    int width, height;
+    glfwGetWindowSize(g_window, &width, &height);
+    return height;
+}
+
+void resize_canvas()
+{
+    on_size_changed();
+}
+
+#endif
+
+void glfw_error_callback(int error, const char* description)
+{
+    printf("GLFW error: %d - %s\n", error, description);
+}
 
 void on_size_changed()
 {
@@ -58,7 +89,7 @@ void loop()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    example::NodeEditorShow();
+    renderNodeEditor();
     ImGui::Render();
 
     int display_w, display_h;
@@ -74,6 +105,7 @@ void loop()
 
 int init_gl()
 {
+    // glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
     {
         fprintf(stderr, "Failed to initialize GLFW\n");
@@ -82,11 +114,14 @@ int init_gl()
 
     // glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // Open a window and create its OpenGL context
-    int canvasWidth = 800;
-    int canvasHeight = 600;
-    g_window = glfwCreateWindow(canvasWidth, canvasHeight, "WebGui Demo", NULL, NULL);
+    g_width = 800;
+    g_height = 600;
+    g_window = glfwCreateWindow(g_width, g_height, "Node editor", NULL, NULL);
     if (g_window == NULL)
     {
         fprintf(stderr, "Failed to open GLFW window.\n");
@@ -103,16 +138,109 @@ int init_imgui()
     // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    example::NodeEditorInitialize();
-    ImGui_ImplGlfw_InitForOpenGL(g_window, true);
-    ImGui_ImplOpenGL3_Init();
+
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     // Setup style
     ImGui::StyleColorsDark();
 
-    ImGuiIO &io = ImGui::GetIO();
+    ImGui_ImplGlfw_InitForOpenGL(g_window, true);
+    ImGui_ImplOpenGL3_Init();
 
-    resizeCanvas();
+    resize_canvas();
+    
+    initializeNodeEditor();
+    registerNodes(R"(
+    {
+        "time": {
+            "outputs": {
+                "time_sec": "float"
+            }
+        },
+        "functions/sine": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/square": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "dutyCycle": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/sawtooth": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "functions/triangle": {
+            "inputs": {
+                "baseline": "float",
+                "phase": "float",
+                "amplitude": "float",
+                "frequencyHz": "float",
+                "x": "float"
+            },
+            "outputs": {
+                "y": "float"
+            }
+        },
+        "math/const_float": {
+            "outputs": {
+                "value": "float"
+            }
+        },
+        "math/add": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        },
+        "math/subtract": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        },
+        "math/multiply": {
+            "inputs": {
+                "a": "float",
+                "b": "float"
+            },
+            "outputs": {
+                "result": "float"
+            }
+        }
+    }
+    )");
 
     return 0;
 }
@@ -128,7 +256,7 @@ void quit()
 {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    example::NodeEditorShutdown();
+    shutdownNodeEditor();
     glfwTerminate();
 }
 
@@ -139,9 +267,14 @@ extern "C" int main(int argc, char **argv)
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(loop, 0, 1);
+#else
+    while (!glfwWindowShouldClose(g_window))
+    {
+        loop();
+        glfwSwapBuffers(g_window);
+    }
 #endif
 
     quit();
-
     return 0;
 }
