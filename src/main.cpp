@@ -207,6 +207,11 @@ int init_imgui()
                 "y": "float"
             }
         },
+        "math/const_float": {
+            "outputs": {
+                "value": "float"
+            }
+        },
         "math/add": {
             "inputs": {
                 "a": "float",

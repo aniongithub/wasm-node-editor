@@ -12,12 +12,6 @@ T max(T a, T b)
     return a > b ? a : b;
 }
 
-template <>
-ImVec2 max(ImVec2 a, ImVec2 b)
-{
-    return ImVec2(max(a.x, b.x), max(a.y, b.y));
-}
-
 template <char splitchar>
 class StringSplitter
 {

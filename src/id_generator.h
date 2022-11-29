@@ -2,22 +2,31 @@
 
 #include <map>
 
-template <typename TKey, typename TId>
+template <typename TKey>
 class IdGenerator
 {
     private:
-        TId _currId;
-        std::map<TKey, TId> _left;
-        std::map<TId, TKey> _right;    
+        int _currId;
+        
+        // TODO: This is efficient enough? Figure it out later
+        std::map<TKey, int> _left;
+        std::map<int, TKey> _right;    
     public:
-        IdGenerator(TId idStart) 
-            :_currId(idStart)
+        static IdGenerator<TKey>& instance()
+        {
+            static IdGenerator<TKey> instance;
+            return instance;
+        }
+
+        IdGenerator(IdGenerator<TKey> const& other) = delete;
+        void operator=(IdGenerator<TKey> const&) = delete;
+        
+        IdGenerator() 
+            :_currId(1)
         {
         }
-        IdGenerator(IdGenerator const&) = delete;
-        void operator=(IdGenerator const&) = delete;
 
-        bool getId(TKey key, TId& id)
+        bool getId(TKey key, int& id)
         {
             auto it = _left.find(key);
             if (it == _left.end())
@@ -32,7 +41,7 @@ class IdGenerator
             return true;
         }
 
-        bool getKey(TId id, TKey& key)
+        bool getKey(int id, TKey& key)
         {
             auto it = _right.find(id);
             if (it == _right.end())
@@ -44,3 +53,5 @@ class IdGenerator
             }
         }
 };
+
+using name_to_id = IdGenerator<std::string>;

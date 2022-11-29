@@ -17,18 +17,19 @@ using json = nlohmann::json;
 
 #include "id_generator.h"
 #include "utils.h"
+#include "node.h"
 
 #define INPUT_OUTPUT_SPACING 25
 
 int id = 1;
 bool popup = false;
 ImVec2 nextNodePos = ImVec2(-1, -1);
-std::vector<std::string> nodes;
+std::vector<Node> nodes;
 json nodes_data;
 json createNodeMenu_data = {};
 ImNodesContext* imnodes_ctx;
-IdGenerator<std::string, int> idGen(1);
 std::vector<std::pair<int, int>> links;
+std::vector<Node> selectedNodes;
 
 void initializeNodeEditor()
 {
@@ -42,9 +43,6 @@ void registerNodes(std::string json_data)
     nodes_data = json::parse(stream);
     for (auto it = nodes_data.begin(); it != nodes_data.end(); it++)
     {
-        int id_int;
-        idGen.getId(it.key(), id_int);
-
         // collapse node ids into a category tree
         std::stringstream id(it.key());
         std::string id_segment;
@@ -57,84 +55,13 @@ void registerNodes(std::string json_data)
             curr = &((*curr)[id_segment]);
         }
         *curr = it.key();
-
-        // reserve ids for all nodes, input and output ports using keys of the form
-        // node/category/../here/node_name.port_name
-        auto node = nodes_data[it.key()];
-        if (node.contains("inputs"))
-        {
-            for (auto i = node["inputs"].begin(); i != node["inputs"].end(); i++)
-            {
-                int input_id;
-                idGen.getId(it.key() + "." + i.key(), input_id);
-            }
-        }
-        if (node.contains("outputs"))
-        {
-            for (auto o = node["outputs"].begin(); o != node["outputs"].end(); o++)
-            {
-                int output_id;
-                idGen.getId(it.key() + "." + o.key(), output_id);
-            }
-        }
     }
-    std::cout << createNodeMenu_data.dump(4) << std::endl;
 }
 
-static int renderNode(std::string node_id, const std::vector<const char*>& inputs, const std::vector<const char*>& outputs)
+void createNode(const char* id, ImVec2 createPos)
 {
-    int int_id;
-    idGen.getId(node_id, int_id);
-    ImNodes::BeginNode(int_id);
-
-    ImNodes::BeginNodeTitleBar();
-
-    auto idStream = std::stringstream(node_id);
-    std::string id_segment;
-    // Get the last part of the full node title
-    while (std::getline(idStream, id_segment, '/'));
-
-    ImGui::TextUnformatted(id_segment.c_str());
-    ImNodes::EndNodeTitleBar();
-
-    float maxInputTextSize = 0;
-    assert(nodes_data.contains(node_id));
-    auto& node = nodes_data[node_id];
-
-    if (node.contains("inputs"))
-    {
-        for (auto it = node["inputs"].begin(); it != node["inputs"].end(); it++)
-        {
-            int input_id;
-            idGen.getId(node_id + "." + it.key(), input_id);
-            ImNodes::BeginInputAttribute(input_id);
-            ImGui::TextUnformatted(it.key().c_str());
-            ImNodes::EndInputAttribute();
-
-            maxInputTextSize = max(maxInputTextSize, ImGui::CalcTextSize(it.key().c_str()).x);
-        }
-    }
-
-    if (node.contains("outputs"))
-    {
-        for (auto it = node["outputs"].begin(); it != node["outputs"].end(); it++)
-        {
-            int output_id;
-            idGen.getId(node_id + "." + it.key(), output_id);
-            ImNodes::BeginOutputAttribute(output_id);
-            ImGui::Indent(maxInputTextSize + INPUT_OUTPUT_SPACING);
-            ImGui::TextUnformatted(it.key().c_str());
-            ImNodes::EndOutputAttribute();
-        }
-    }
-
-    ImNodes::EndNode();
-    return int_id;
-}
-
-void createNode(const char* item, ImVec2 createPos)
-{
-    nodes.push_back(item);
+    Node node(id, nodes_data[id]);
+    nodes.push_back(node);
     nextNodePos = createPos;
     popup = false;
 }
@@ -185,8 +112,6 @@ bool renderNodeEditor()
     ImGui::Begin("Log");
     ImGui::End();
 
-    // ImGui::SetNextWindowPos(ImVec2(0, 0));
-    // ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
     ImGui::Begin("Node editor"); // Replace this with filename
 
     renderCreateNodeMenu();
@@ -194,17 +119,22 @@ bool renderNodeEditor()
     // reset our id counter
     id = 1;
 
+    selectedNodes.clear();
+
     ImNodes::BeginNodeEditor();
 
     for (int i = 0; i < nodes.size(); i++)
     {
-        auto n = nodes[i];
-        auto id = renderNode(n, { "input0", "input1" }, { "output" });
+        auto node = nodes[i];
+        int node_id = node.int_id();        
+        node.render();
         if ((i == nodes.size() - 1) && (nextNodePos.x != -1) && (nextNodePos.y != -1))
         {
-            ImNodes::SetNodeScreenSpacePos(id, nextNodePos);
+            ImNodes::SetNodeScreenSpacePos(node_id, nextNodePos);
             nextNodePos = ImVec2(-1, -1);
         }
+        if (ImNodes::IsNodeSelected(node_id))
+            selectedNodes.push_back(node);
     }
 
     // Draw links
@@ -224,24 +154,27 @@ bool renderNodeEditor()
             &end_node_id, &end_attribute_id, 
             &created_from_snap))
         {
-            std::string start_node_name;
-            idGen.getKey(start_node_id, start_node_name);
-            std::string start_attribute_name;
-            idGen.getKey(start_attribute_id, start_attribute_name);
-            std::string end_node_name;
-            idGen.getKey(end_node_id, end_node_name);
-            std::string end_attribute_name;
-            idGen.getKey(end_attribute_id, end_attribute_name);
+            auto start_noderef = std::find_if(nodes.begin(), nodes.end(), 
+            [&](Node& node) {
+                return node.int_id() == start_node_id;
+            });
+            assert(start_noderef != nodes.end());
+            
+            auto end_noderef = std::find_if(nodes.begin(), nodes.end(), [&](Node node) {
+                return node.int_id() == end_node_id;
+            });
+            assert(end_noderef != nodes.end());
 
-            auto start_attr_parts = StringSplitter<'.'>(start_attribute_name).allTokens();
-            auto end_attr_parts = StringSplitter<'.'>(end_attribute_name).allTokens();
+            auto start_portref = std::find_if(start_noderef->outputs().begin(), start_noderef->outputs().end(), 
+            [&](OutputPort& port){
+                return port.int_id() == start_attribute_id;
+            });
+            auto end_portref = std::find_if(end_noderef->inputs().begin(), end_noderef->inputs().end(), 
+            [&](InputPort& port){
+                return port.int_id() == end_attribute_id;
+            });
 
-            auto start_noderef = nodes_data[start_attr_parts[0]];
-            auto start_attribute_type = start_noderef["outputs"][start_attr_parts[1]].get<std::string>();
-            auto end_noderef = nodes_data[end_attr_parts[0]];
-            auto end_attribute_type = end_noderef["inputs"][end_attr_parts[1]].get<std::string>();
-
-            if (start_attribute_type == end_attribute_type)
+            if (start_portref->type() == end_portref->type())
                 links.push_back(std::make_pair(start_attribute_id, end_attribute_id));
         }
     }
