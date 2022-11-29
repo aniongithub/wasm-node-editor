@@ -143,6 +143,7 @@ bool renderNodeEditor()
             ImNodes::Link(id++, link.first, link.second);
     }
 
+    ImNodes::MiniMap();
     ImNodes::EndNodeEditor();
 
     // Handle links
