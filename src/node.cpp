@@ -1,12 +1,13 @@
 #include "node.h"
 
 #include <map>
+#include <imgui.h>
+#include <imnodes.h>
 
 #include "utils.h"
 #include "id_generator.h"
-
-#include <imgui.h>
-#include <imnodes.h>
+#include "factory.hpp"
+#include "property_editor.h"
 
 Port::Port(Node& parent, std::string name, std::string type):
     _parent(parent),
@@ -34,6 +35,38 @@ void OutputPort::render()
     ImNodes::BeginOutputAttribute(_id_int);
     ImGui::TextUnformatted(_name.c_str());
     ImNodes::EndOutputAttribute();
+}
+
+Property::Property(Node& parent, std::string name, json type):
+    _parent(parent),
+    _name(name),
+    _type(type)
+{
+    name_to_id::instance().getId(_parent.name() + "." + _name, _id_int);
+    if (type.is_string())
+        _editor = Factory<PropertyEditor>::instance().create(type.get<std::string>());
+    else
+    {
+        assert(type.is_object());
+        assert(type.contains("type"));
+        auto type_name = type["type"].get<std::string>();
+        auto editor_name = type.contains("editor") ? type["editor"].get<std::string>() : type_name;
+        _editor = Factory<PropertyEditor>::instance().create(editor_name);
+    }
+}
+
+void Property::render()
+{
+    if (&_parent == &Node::empty())
+        return;
+
+    ImGui::TableNextRow();
+
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(_name.c_str());
+    
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted(_type.dump(4).c_str());
 }
 
 Node::Node(std::string id, json node_metadata):
@@ -70,6 +103,11 @@ Node::Node(std::string id, json node_metadata):
     {
         for (auto o = node_metadata["outputs"].begin(); o != node_metadata["outputs"].end(); o++)
             _outputs.push_back(OutputPort(*this, o.key(), o.value()));
+    }
+    if (node_metadata.contains("properties"))
+    {
+        for (auto o = node_metadata["properties"].begin(); o != node_metadata["properties"].end(); o++)
+            _properties.push_back(Property(*this, o.key(), o.value()));
     }
 }
 
@@ -109,4 +147,22 @@ void Node::render()
     ImGui::PopStyleVar();
 
     ImNodes::EndNode();
+}
+
+void Node::renderProperties()
+{
+    ImVec2 cell_padding(10, 3);
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+    if (ImGui::BeginTable(_name.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable))
+    {
+        ImGui::TableSetupColumn("name");
+        ImGui::TableSetupColumn("value");
+        ImGui::TableHeadersRow();
+
+        for (auto& property: _properties)
+            property.render();
+
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
 }

@@ -104,10 +104,6 @@ bool renderNodeEditor()
 {
     ImGui::DockSpaceOverViewport();
 
-    // TODO: Add property editor here...
-    ImGui::Begin("Properties");
-    ImGui::End();
-
     // TODO: Add log output here...
     ImGui::Begin("Log");
     ImGui::End();
@@ -137,13 +133,23 @@ bool renderNodeEditor()
             selectedNodes.push_back(node);
     }
 
+    // Render property editor
+    {
+        ImGui::Begin("Properties");
+        // TODO: Deal with multiple nodes case later
+        if (selectedNodes.size() == 1) 
+            for (auto& node: selectedNodes)
+                node.renderProperties();
+        ImGui::End();
+    }
+
     // Draw links
     {
         for (const auto& link: links)
             ImNodes::Link(id++, link.first, link.second);
     }
 
-    ImNodes::MiniMap();
+    ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
     ImNodes::EndNodeEditor();
 
     // Handle links

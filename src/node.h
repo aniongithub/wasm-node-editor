@@ -4,9 +4,12 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+#include "property_editor.h"
+
 class Port;
 class InputPort;
 class OutputPort;
+class Property;
 
 class Node
 {
@@ -18,10 +21,13 @@ class Node
         json _node_metadata;
         std::vector<InputPort> _inputs;
         std::vector<OutputPort> _outputs;
+        std::vector<Property> _properties;
+    protected:
         Node(){}
     public:
         Node(std::string id, json node_metadata);
         virtual void render();
+        virtual void renderProperties();
 
         std::string& name() { return _name; }
         const std::string& id() { return _id; }
@@ -34,6 +40,7 @@ class Node
 
         std::vector<InputPort>& inputs() { return _inputs; }
         std::vector<OutputPort>& outputs() { return _outputs; }
+        std::vector<Property>& properties() { return _properties; }
 };
 
 class Port
@@ -85,4 +92,24 @@ class OutputPort: public Port
             static OutputPort _empty;
             return _empty;
         }
+};
+
+class Property
+{
+    private:
+        int _id_int;
+        Node& _parent;
+        std::string _name;
+        json _type;
+        std::vector<uint8_t> _data;
+        std::shared_ptr<PropertyEditor> _editor;
+        Property():
+            _parent(Node::empty()) {}
+    public:
+        Property(Node& parent, std::string name, json type);
+        void render();
+
+        const std::string& name() { return _name; }
+        const json& type() { return _type; }
+        const int int_id() { return _id_int; }
 };

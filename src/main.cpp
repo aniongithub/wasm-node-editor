@@ -207,8 +207,55 @@ int init_imgui()
                 "y": "float"
             }
         },
-        "math/const_float": {
+        "foo": {
+            "properties": {
+                "bar": {
+                    "type": "enum",
+                    "args": {
+                        "enum_names": [
+                            "foobar",
+                            "foobaz",
+                            "bazbaz"
+                        ]
+                    }
+                }
+            }  
+        },
+        "color": {
             "outputs": {
+                "color": {
+                    "type": "vec3",
+                    "editor": "color_picker",
+                    "args": {
+                        "pick_alpha": false
+                    }
+                }
+            },
+            "properties": {
+                "value": {
+                    "type": "vec3",
+                    "editor" : "color_picker",
+                    "editor_args": {
+                        "alpha": false
+                    }
+                }
+            }
+        },
+        "vec3split": {
+            "inputs": {
+                "vec": "any"
+            },
+            "outputs": {
+                "x": "float",
+                "y": "float",
+                "z": "float"
+            }
+        },
+        "const_float": {
+            "outputs": {
+                "value": "float"
+            },
+            "properties": {
                 "value": "float"
             }
         },
@@ -237,6 +284,12 @@ int init_imgui()
             },
             "outputs": {
                 "result": "float"
+            }
+        },
+        "file/csv": {
+            "properties": {
+                "filename": "string",
+                "columns": "list[string]"
             }
         }
     }
