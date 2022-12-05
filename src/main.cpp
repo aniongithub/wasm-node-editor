@@ -210,13 +210,11 @@ int init_imgui()
         "foo": {
             "properties": {
                 "bar": {
-                    "type": "enum",
+                    "type": "float",
                     "args": {
-                        "enum_names": [
-                            "foobar",
-                            "foobaz",
-                            "bazbaz"
-                        ]
+                        "step": 0.0,
+                        "step_fast": 1.0,
+                        "format": "%.3f"
                     }
                 }
             }  

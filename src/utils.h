@@ -34,4 +34,12 @@ class StringSplitter
 
             return tokens;
         }
+        std::string lastToken()
+        {
+            std::string token;
+            while (std::getline(_data, token, splitchar))
+                ;
+
+            return token;
+        }
 };

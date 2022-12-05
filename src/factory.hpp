@@ -5,17 +5,17 @@
 #include <string>
 #include <memory>
 
-template <typename TBase>
+template <typename TBase, typename... Args>
 class Factory
 {
     private:
-        std::map<std::string, std::function<std::unique_ptr<TBase>()>> _registered;
+        std::map<std::string, std::function<std::unique_ptr<TBase>(Args... args)>> _registered;
 
         Factory() {}
     public:
-        static Factory<TBase>& instance()
+        static Factory<TBase, Args...>& instance()
         {
-            static Factory<TBase> instance;
+            static Factory<TBase, Args...> instance;
             return instance;
         }
 
@@ -23,19 +23,17 @@ class Factory
         void operator=(Factory const&) = delete;
         
         template <typename TDerived>
-        void register_class(std::string id, std::function<std::unique_ptr<TBase>()> createFunc)
+        void register_class(std::string id, std::function<std::unique_ptr<TBase>(Args... args)> createFunc)
         {
             _registered[id] = createFunc;
         }
 
-        std::unique_ptr<TBase> create(std::string id)
+        std::unique_ptr<TBase> create(std::string id, Args... args)
         {
             auto it = _registered.find(id);
             if (it != _registered.end())
-                return it->second();
+                return it->second(args...);
             else
-                return std::make_unique<TBase>();
+                return std::make_unique<TBase>(args...);
         }
 };
-
-#define REGISTER_TYPE(id, type, base) class register##type { public: register##type() { Factory<base>::instance().register_class<type>(id, []()->std::unique_ptr<base> { return std::make_unique<type>(); });} }; static register##type global_##type##Registration;
