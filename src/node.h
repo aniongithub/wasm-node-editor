@@ -1,7 +1,7 @@
 #pragma once
 
+#include <memory>
 #include <string>
-#include <string_view>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
@@ -11,51 +11,56 @@ class OutputPort;
 class Property;
 class PropertyEditor;
 
-class Node
+// From https://stackoverflow.com/questions/33069674/is-this-trick-to-make-calling-shared-from-this-in-the-constructor-just-work
+#define ENABLE_SHARED_FROM_THIS_IN_CTOR(type) auto ptr = std::shared_ptr<type>( this, [](type*){} )
+
+class Node: public std::enable_shared_from_this<Node>
 {
     private:
         std::string _id;
         json _node_metadata;
-        std::map<std::string, InputPort> _inputs;
-        std::map<std::string, OutputPort> _outputs;
-        std::map<std::string, Property> _properties;
+        std::map<std::string, std::shared_ptr<InputPort>> _inputs;
+        std::map<std::string, std::shared_ptr<OutputPort>> _outputs;
+        std::map<std::string, std::shared_ptr<Property>> _properties;
         std::shared_ptr<PropertyEditor> _stringEditor;
 
-    protected:
-        Node() {}
     public:
+        Node() = delete;
+        Node(const Node&) = delete;
         Node(std::string id, json node_metadata);
         virtual void render();
         virtual void renderProperties();
 
         const std::string& id() { return _id; }
-        static Node& empty()
+        static std::shared_ptr<Node> empty()
         {
-            static Node _empty;
+            static auto _empty = std::make_shared<Node>("", json());
             return _empty;
         }
 
-        std::map<std::string, InputPort>& inputs() { return _inputs; }
-        std::map<std::string, OutputPort>& outputs() { return _outputs; }
-        std::map<std::string, Property>& properties() { return _properties; }
+        std::map<std::string, std::shared_ptr<InputPort>>& inputs() { return _inputs; }
+        std::map<std::string, std::shared_ptr<OutputPort>>& outputs() { return _outputs; }
+        std::map<std::string, std::shared_ptr<Property>>& properties() { return _properties; }
 
         std::string name();
 };
 
-class Port
+class Port: public std::enable_shared_from_this<Port>
 {
     protected:
-        Node& _parent;
+        std::shared_ptr<Node> _parent;
         std::string _name;
         std::string _type;
-        Port():
-            _parent(Node::empty()) {}
     public:
-        Port(Node& parent, std::string name, std::string type):
+        Port() = delete;
+        Port(const Port&) = delete;
+        Port(std::shared_ptr<Node> parent, std::string name, std::string type):
             _parent(parent),
             _name(name),
             _type(type)
-        {}
+        {
+            ENABLE_SHARED_FROM_THIS_IN_CTOR(Port);
+        }
 
         virtual void render() = 0;
 
@@ -66,15 +71,17 @@ class Port
 class InputPort: public Port
 {
     public:
-        InputPort() {}
-        InputPort(Node& parent, std::string name, std::string type):
+        InputPort() = delete;
+        InputPort(const InputPort&) = delete;
+        InputPort(std::shared_ptr<Node> parent, std::string name, std::string type):
             Port(parent, name, type)
-        {}
-        
-        void render();
-        static InputPort& empty()
         {
-            static InputPort _empty;
+            ENABLE_SHARED_FROM_THIS_IN_CTOR(InputPort);
+        }
+        void render();
+        static std::shared_ptr<InputPort> empty()
+        {
+            static auto _empty = std::make_shared<InputPort>(Node::empty(), "", "");
             return _empty;
         }
 };
@@ -82,30 +89,35 @@ class InputPort: public Port
 class OutputPort: public Port
 {
     public:
-        OutputPort() {}
-        OutputPort(Node& parent, std::string name, std::string type):
+        OutputPort() = delete;
+        OutputPort(const OutputPort&) = delete;
+        OutputPort(std::shared_ptr<Node> parent, std::string name, std::string type):
             Port(parent, name, type)
-        {}
-        void render();
-        static OutputPort& empty()
         {
-            static OutputPort _empty;
+            ENABLE_SHARED_FROM_THIS_IN_CTOR(OutputPort);
+        }
+        void render();
+        static std::shared_ptr<OutputPort> empty()
+        {
+            static auto _empty = std::make_shared<OutputPort>(Node::empty(), "", "");
             return _empty;
         }
 };
 
-class Property
+class Property: public std::enable_shared_from_this<Property>
 {
     private:
-        Node& _parent;
+        std::shared_ptr<Node> _parent;
         std::string _name;
         json _type;
         std::vector<uint8_t> _data;
         std::shared_ptr<PropertyEditor> _editor;
+
     public:
-        Property():
-            _parent(Node::empty()) {}
-        Property(Node& parent, std::string name, json type);
+        Property() = delete;
+        Property(const Property&) = delete;
+        Property(std::shared_ptr<Node> parent, std::string name, json type);
+
         void render();
 
         const json& type() { return _type; }
@@ -122,14 +134,19 @@ class Property
         std::string fullname();
 };
 
-class PropertyEditor
+class PropertyEditor: public std::enable_shared_from_this<PropertyEditor>
 {
     protected:
-        Property& _parent;
+        std::shared_ptr<Property> _parent;
     public:
-        PropertyEditor(Property& parent): 
+        PropertyEditor() = delete;
+        PropertyEditor(const PropertyEditor&) = delete;
+        PropertyEditor(std::shared_ptr<Property> parent): 
             _parent(parent)
-        {}
+        {
+            ENABLE_SHARED_FROM_THIS_IN_CTOR(PropertyEditor);
+        }
+
         virtual void render() {}
         std::string fullname();
 };
@@ -139,9 +156,9 @@ class PropertyEditor
     public:  \
     register##type()  \
     {  \
-        Factory<PropertyEditor, Property&>::instance().register_class<type>( \
+        Factory<PropertyEditor, std::shared_ptr<Property>>::instance().register_class<type>( \
             id, \
-            [](Property& parent) -> std::unique_ptr<PropertyEditor> \
+            [](std::shared_ptr<Property> parent) -> std::unique_ptr<PropertyEditor> \
             { \
                 return std::make_unique<type>(parent); \
             } \
@@ -150,4 +167,4 @@ class PropertyEditor
 }; \
 static register##type type##Registration;
 
-#define CREATE_PROPERTYEDITOR(id, parent) Factory<PropertyEditor, Property&>::instance().create(id, parent)
+#define CREATE_PROPERTYEDITOR(id, parent) Factory<PropertyEditor, std::shared_ptr<Property>>::instance().create(id, parent)

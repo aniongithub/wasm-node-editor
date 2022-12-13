@@ -10,12 +10,12 @@
 
 std::string Port::fullName()
 {
-    return _parent.name() + "." + _name;
+    return _parent->name() + "." + _name;
 }
 
 void InputPort::render()
 {
-    if (&_parent == &Node::empty())
+    if (_parent == Node::empty())
         return;
 
     int id_int;
@@ -27,7 +27,7 @@ void InputPort::render()
 
 void OutputPort::render()
 {
-    if (&_parent == &Node::empty())
+    if (_parent == Node::empty())
         return;
 
     int id_int;
@@ -37,11 +37,13 @@ void OutputPort::render()
     ImNodes::EndOutputAttribute();
 }
 
-Property::Property(Node& parent, std::string name, json type):
+Property::Property(std::shared_ptr<Node> parent, std::string name, json type):
     _parent(parent),
     _name(name),
     _type(type)
 {  
+    ENABLE_SHARED_FROM_THIS_IN_CTOR(Property);
+
     // Deal with simple typenames
     if (_type.is_string())
     {
@@ -51,17 +53,17 @@ Property::Property(Node& parent, std::string name, json type):
     
     auto type_name = _type.value("type", "unknown");
     auto editor_name = _type.value("editor", type_name);
-    _editor = CREATE_PROPERTYEDITOR(editor_name, *this);
+    _editor = CREATE_PROPERTYEDITOR(editor_name, shared_from_this());
 }
 
 std::string Property::fullname()
 {
-    return _parent.name() + "." + _name;
+    return _parent->name() + "." + _name;
 }
 
 void Property::render()
 {
-    if (&_parent == &Node::empty())
+    if (_parent == Node::empty())
         return;
 
     ImGui::TableNextRow();
@@ -90,13 +92,18 @@ void Property::setData(std::string& value)
 
 std::string PropertyEditor::fullname()
 {
-    return "##" + _parent.fullname() + "_editor";
+    return "##" + _parent->fullname() + "_editor";
 }
 
 Node::Node(std::string id, json node_metadata):
     _id(id),
     _node_metadata(node_metadata)
 {
+    ENABLE_SHARED_FROM_THIS_IN_CTOR(Node);
+
+    // Don't attempt to initialize when creating an empty node
+    if (id == "")
+        return;
 
     auto idParts = StringSplitter<'/'>(_id).allTokens();
     auto nameRoot = idParts[idParts.size() - 1];
@@ -114,31 +121,31 @@ Node::Node(std::string id, json node_metadata):
         }
     
     // Add the "name" property
-    _properties.insert({"name", Property(*this, "name", json({{"type", "string"}}))});
+    _properties.insert({"name", std::make_shared<Property>(shared_from_this(), "name", json({{"type", "string"}}))});
     auto name = nameRoot + std::to_string(name_suffix);
-    _properties["name"].setData<std::string>(name);
+    _properties["name"]->setData<std::string>(name);
     
     if (_node_metadata.contains("inputs"))
     {
         for (auto i = _node_metadata["inputs"].begin(); i != _node_metadata["inputs"].end(); i++)
-            _inputs.insert({i.key(), InputPort(*this, i.key(), i.value())});
+            _inputs.insert({i.key(), std::make_shared<InputPort>(shared_from_this(), i.key(), i.value())});
     }
     if (_node_metadata.contains("outputs"))
     {
         for (auto o = _node_metadata["outputs"].begin(); o != _node_metadata["outputs"].end(); o++)
-            _outputs.insert({o.key(), OutputPort(*this, o.key(), o.value())});
+            _outputs.insert({o.key(), std::make_shared<OutputPort>(shared_from_this(), o.key(), o.value())});
     }
     
     if (_node_metadata.contains("properties"))
     {
         for (auto o = _node_metadata["properties"].begin(); o != _node_metadata["properties"].end(); o++)
-            _properties.insert({o.key(), Property(*this, o.key(), o.value())});
+            _properties.insert({o.key(), std::make_shared<Property>(shared_from_this(), o.key(), o.value())});
     }
 }
 
 std::string Node::name()
 {
-    return std::string(_properties["name"].getData<char>());
+    return std::string(_properties["name"]->getData<char>());
 }
 
 void Node::render()
@@ -170,10 +177,10 @@ void Node::render()
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            input.second.render();
+            input.second->render();
             
             ImGui::TableNextColumn();
-            output.second.render();
+            output.second->render();
         }
 
         ImGui::EndTable();
@@ -195,7 +202,7 @@ void Node::renderProperties()
         ImGui::TableHeadersRow();
 
         for (auto& property: _properties)
-            property.second.render();
+            property.second->render();
 
         ImGui::EndTable();
     }

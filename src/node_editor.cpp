@@ -2,8 +2,8 @@
 
 #include <vector>
 #include <string>
-#include <string_view>
 #include <map>
+#include <memory>
 
 #include <imnodes.h>
 #include <imgui.h>
@@ -25,12 +25,12 @@ using json = nlohmann::json;
 int id = 1;
 bool popup = false;
 ImVec2 nextNodePos = ImVec2(-1, -1);
-std::vector<Node> nodes;
+std::vector<std::shared_ptr<Node>> nodes;
 json nodes_data;
 json createNodeMenu_data = {};
 ImNodesContext* imnodes_ctx;
 std::vector<Link> links;
-std::vector<Node> selectedNodes;
+std::vector<std::shared_ptr<Node>> selectedNodes;
 
 void initializeNodeEditor()
 {
@@ -61,8 +61,7 @@ void registerNodes(std::string json_data)
 
 void createNode(const char* id, ImVec2 createPos)
 {
-    Node node(id, nodes_data[id]);
-    nodes.emplace_back(std::move(node));
+    nodes.push_back(std::make_shared<Node>(id, nodes_data[id]));
     nextNodePos = createPos;
     popup = false;
 }
@@ -116,6 +115,7 @@ bool renderNodeEditor()
     // reset our id counter
     id = 1;
 
+    // Clear selected nodes per frame
     selectedNodes.clear();
 
     ImNodes::BeginNodeEditor();
@@ -124,9 +124,9 @@ bool renderNodeEditor()
     {
         auto node = nodes[i];
         int node_id;
-        name_to_id::instance().getId(node.name(), node_id);
+        name_to_id::instance().getId(node->name(), node_id);
         
-        node.render();
+        node->render();
         if ((i == nodes.size() - 1) && (nextNodePos.x != -1) && (nextNodePos.y != -1))
         {
             ImNodes::SetNodeScreenSpacePos(node_id, nextNodePos);
@@ -142,7 +142,7 @@ bool renderNodeEditor()
         // TODO: Deal with multiple nodes case later
         if (selectedNodes.size() == 1) 
             for (auto& node: selectedNodes)
-                node.renderProperties();
+                node->renderProperties();
         ImGui::End();
     }
 
@@ -151,10 +151,10 @@ bool renderNodeEditor()
         for (auto& link: links)
         {
             int start_port_id;
-            name_to_id::instance().getId(link.start_port().fullName(), start_port_id);
+            name_to_id::instance().getId(link.start_port()->fullName(), start_port_id);
             
             int end_port_id;
-            name_to_id::instance().getId(link.end_port().fullName(), end_port_id);
+            name_to_id::instance().getId(link.end_port()->fullName(), end_port_id);
 
             int link_id;
             name_to_id::instance().getId(link.fullName(), link_id);
@@ -179,32 +179,32 @@ bool renderNodeEditor()
             std::string end_node_name;
             name_to_id::instance().getKey(end_node_id, end_node_name);
             
-            Node& start_noderef = Node::empty();
-            Node& end_noderef = Node::empty();
+            auto start_noderef = Node::empty();
+            auto end_noderef = Node::empty();
             for (auto& node: nodes)
             {
-                if (node.name() == start_node_name)
+                if (node->name() == start_node_name)
                     start_noderef = node;
-                if (node.name() == end_node_name)
+                if (node->name() == end_node_name)
                     end_noderef = node;
                 
-                if ((&start_noderef != &Node::empty()) && 
-                    (&end_noderef != &Node::empty()))
+                if ((start_noderef != Node::empty()) && 
+                    (end_noderef != Node::empty()))
                     break;
             }
             
             std::string start_port_fullname;
             name_to_id::instance().getKey(start_attribute_id, start_port_fullname);
             auto start_port_name = StringSplitter<'.'>(start_port_fullname).lastToken();
-            auto start_portref = start_noderef.outputs()[start_port_name];
+            auto start_portref = start_noderef->outputs()[start_port_name];
             
             std::string end_port_fullname;
             name_to_id::instance().getKey(end_attribute_id, end_port_fullname);
             auto end_port_name = StringSplitter<'.'>(end_port_fullname).lastToken();
-            auto end_portref = end_noderef.inputs()[end_port_name];
+            auto end_portref = end_noderef->inputs()[end_port_name];
 
             // TODO: The types may be implicitly convertible?
-            if (start_portref.type() == end_portref.type())
+            if (start_portref->type() == end_portref->type())
                 links.push_back(std::move(Link(start_noderef, start_portref, end_noderef, end_portref)));
         }
     }
