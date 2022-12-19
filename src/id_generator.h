@@ -41,6 +41,25 @@ class IdGenerator
             return true;
         }
 
+        // TODO: If we update to use C++17, we can use extract like so:
+        // https://stackoverflow.com/a/44883472/802203
+        bool renameKey(TKey key, TKey newKey)
+        {
+            auto it = _left.find(key);
+            if (it != _left.end())
+            {
+                auto currId = it->second;
+                _left.erase(key);
+                _left.insert({newKey, currId});
+                _right.erase(currId);
+                _right.insert({currId, newKey});
+            }
+            else
+                return false;
+            
+            return true;
+        }
+
         bool getKey(int id, TKey& key)
         {
             auto it = _right.find(id);

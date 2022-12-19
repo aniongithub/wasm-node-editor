@@ -149,6 +149,7 @@ class PropertyEditor: public std::enable_shared_from_this<PropertyEditor>
 
         virtual void render() {}
         std::string fullname();
+        std::shared_ptr<Property> parent() { return _parent; }
 };
 
 #define REGISTER_PROPERTYEDITOR(id, type) class register##type  \

@@ -121,7 +121,7 @@ Node::Node(std::string id, json node_metadata):
         }
     
     // Add the "name" property
-    _properties.insert({"name", std::make_shared<Property>(shared_from_this(), "name", json({{"type", "string"}}))});
+    _properties.insert({"name", std::make_shared<Property>(shared_from_this(), "name", json({{"type", "string"}, {"editor", "name_editor"}}))});
     auto name = nameRoot + std::to_string(name_suffix);
     _properties["name"]->setData<std::string>(name);
     

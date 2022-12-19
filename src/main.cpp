@@ -216,8 +216,9 @@ int init_imgui()
                         "step_fast": 1.0,
                         "format": "%.3f"
                     }
-                }
-            }  
+                },
+                "foobar": "string"
+            }
         },
         "color": {
             "outputs": {
