@@ -18,6 +18,7 @@ class Node: public std::enable_shared_from_this<Node>
 {
     private:
         std::string _id;
+        int _render_id;
         json _node_metadata;
         std::map<std::string, std::shared_ptr<InputPort>> _inputs;
         std::map<std::string, std::shared_ptr<OutputPort>> _outputs;
@@ -43,6 +44,7 @@ class Node: public std::enable_shared_from_this<Node>
         std::map<std::string, std::shared_ptr<Property>>& properties() { return _properties; }
 
         std::string name();
+        int render_id() { return _render_id; }
 };
 
 class Port: public std::enable_shared_from_this<Port>
@@ -51,21 +53,16 @@ class Port: public std::enable_shared_from_this<Port>
         std::shared_ptr<Node> _parent;
         std::string _name;
         std::string _type;
+        int _render_id;
     public:
         Port() = delete;
         Port(const Port&) = delete;
-        Port(std::shared_ptr<Node> parent, std::string name, std::string type):
-            _parent(parent),
-            _name(name),
-            _type(type)
-        {
-            ENABLE_SHARED_FROM_THIS_IN_CTOR(Port);
-        }
+        Port(std::shared_ptr<Node> parent, std::string name, std::string type);
 
         virtual void render() = 0;
 
-        std::string fullName();
         const std::string& type() { return _type; }
+        int render_id() { return _render_id; }
 };
 
 class InputPort: public Port
@@ -112,7 +109,7 @@ class Property: public std::enable_shared_from_this<Property>
         json _type;
         std::vector<uint8_t> _data;
         std::shared_ptr<PropertyEditor> _editor;
-
+        int _render_id;
     public:
         Property() = delete;
         Property(const Property&) = delete;

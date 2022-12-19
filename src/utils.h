@@ -43,3 +43,5 @@ class StringSplitter
             return token;
         }
 };
+
+std::string generate_uuid_v4();

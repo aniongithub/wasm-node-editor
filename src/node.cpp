@@ -8,19 +8,22 @@
 #include "id_generator.h"
 #include "factory.hpp"
 
-std::string Port::fullName()
+Port::Port(std::shared_ptr<Node> parent, std::string name, std::string type):
+    _parent(parent),
+    _name(name),
+    _type(type)
 {
-    return _parent->name() + "." + _name;
+    ENABLE_SHARED_FROM_THIS_IN_CTOR(Port);
+    name_to_id::instance().getId(generate_uuid_v4(), _render_id);
 }
+
 
 void InputPort::render()
 {
     if (_parent == Node::empty())
         return;
 
-    int id_int;
-    name_to_id::instance().getId(fullName(), id_int);
-    ImNodes::BeginInputAttribute(id_int);
+    ImNodes::BeginInputAttribute(_render_id);
     ImGui::TextUnformatted(_name.data());
     ImNodes::EndInputAttribute();
 }
@@ -30,9 +33,7 @@ void OutputPort::render()
     if (_parent == Node::empty())
         return;
 
-    int id_int;
-    name_to_id::instance().getId(fullName(), id_int);
-    ImNodes::BeginOutputAttribute(id_int);
+    ImNodes::BeginOutputAttribute(_render_id);
     ImGui::TextUnformatted(_name.data());
     ImNodes::EndOutputAttribute();
 }
@@ -105,6 +106,8 @@ Node::Node(std::string id, json node_metadata):
     if (id == "")
         return;
 
+    name_to_id::instance().getId(generate_uuid_v4(), _render_id);
+
     auto idParts = StringSplitter<'/'>(_id).allTokens();
     auto nameRoot = idParts[idParts.size() - 1];
 
@@ -150,14 +153,11 @@ std::string Node::name()
 
 void Node::render()
 {
-    int node_id;
-    auto node_name = name();
-    name_to_id::instance().getId(node_name, node_id);
-    
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(_render_id);
 
     ImNodes::BeginNodeTitleBar();
 
+    auto node_name = name();
     ImGui::TextUnformatted(node_name.c_str());
     ImNodes::EndNodeTitleBar();
 

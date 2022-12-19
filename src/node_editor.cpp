@@ -123,16 +123,14 @@ bool renderNodeEditor()
     for (int i = 0; i < nodes.size(); i++)
     {
         auto node = nodes[i];
-        int node_id;
-        name_to_id::instance().getId(node->name(), node_id);
-        
+       
         node->render();
         if ((i == nodes.size() - 1) && (nextNodePos.x != -1) && (nextNodePos.y != -1))
         {
-            ImNodes::SetNodeScreenSpacePos(node_id, nextNodePos);
+            ImNodes::SetNodeScreenSpacePos(node->render_id(), nextNodePos);
             nextNodePos = ImVec2(-1, -1);
         }
-        if (ImNodes::IsNodeSelected(node_id))
+        if (ImNodes::IsNodeSelected(node->render_id()))
             selectedNodes.push_back(node);
     }
 
@@ -149,17 +147,7 @@ bool renderNodeEditor()
     // Draw links
     {
         for (auto& link: links)
-        {
-            int start_port_id;
-            name_to_id::instance().getId(link.start_port()->fullName(), start_port_id);
-            
-            int end_port_id;
-            name_to_id::instance().getId(link.end_port()->fullName(), end_port_id);
-
-            int link_id;
-            name_to_id::instance().getId(link.fullName(), link_id);
-            ImNodes::Link(link_id, start_port_id, end_port_id);
-        }
+            ImNodes::Link(link.render_id(), link.start_port()->render_id(), link.end_port()->render_id());
     }
 
     ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
@@ -174,38 +162,44 @@ bool renderNodeEditor()
             &end_node_id, &end_attribute_id, 
             &created_from_snap))
         {
-            std::string start_node_name;
-            name_to_id::instance().getKey(start_node_id, start_node_name);
-            std::string end_node_name;
-            name_to_id::instance().getKey(end_node_id, end_node_name);
-            
-            auto start_noderef = Node::empty();
-            auto end_noderef = Node::empty();
+            auto start_nodeRef = Node::empty();
+            auto end_nodeRef = Node::empty();
             for (auto& node: nodes)
             {
-                if (node->name() == start_node_name)
-                    start_noderef = node;
-                if (node->name() == end_node_name)
-                    end_noderef = node;
+                if (node->render_id() == start_node_id)
+                    start_nodeRef = node;
+                if (node->render_id() == end_node_id)
+                    end_nodeRef = node;
                 
-                if ((start_noderef != Node::empty()) && 
-                    (end_noderef != Node::empty()))
+                if ((start_nodeRef != Node::empty()) && 
+                    (end_nodeRef != Node::empty()))
                     break;
             }
-            
-            std::string start_port_fullname;
-            name_to_id::instance().getKey(start_attribute_id, start_port_fullname);
-            auto start_port_name = StringSplitter<'.'>(start_port_fullname).lastToken();
-            auto start_portref = start_noderef->outputs()[start_port_name];
-            
-            std::string end_port_fullname;
-            name_to_id::instance().getKey(end_attribute_id, end_port_fullname);
-            auto end_port_name = StringSplitter<'.'>(end_port_fullname).lastToken();
-            auto end_portref = end_noderef->inputs()[end_port_name];
+            assert(start_nodeRef != Node::empty() &&
+                end_nodeRef != Node::empty());
 
+            auto start_portRef = OutputPort::empty();
+            
+            for (auto& iter: start_nodeRef->outputs())
+                if (iter.second->render_id() == start_attribute_id)
+                {
+                    start_portRef = iter.second;
+                    break;
+                }
+            auto end_portRef = InputPort::empty();
+            for (auto& iter: end_nodeRef->inputs())
+                if (iter.second->render_id() == end_attribute_id)
+                {
+                    end_portRef = iter.second;
+                    break;
+                }
+
+            assert(start_portRef != OutputPort::empty() &&
+                end_portRef != InputPort::empty());
+            
             // TODO: The types may be implicitly convertible?
-            if (start_portref->type() == end_portref->type())
-                links.push_back(std::move(Link(start_noderef, start_portref, end_noderef, end_portref)));
+            if (start_portRef->type() == end_portRef->type())
+                links.push_back(std::move(Link(start_nodeRef, start_portRef, end_nodeRef, end_portRef)));
         }
     }
 
