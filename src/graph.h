@@ -1,25 +1,26 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "node.h"
+#include "commands.h"
+#include "window.h"
 
-class Link {
+class Graph: public Window
+{
     private:
-        std::shared_ptr<Node> _start_node;
-        std::shared_ptr<OutputPort> _start_port;
-        std::shared_ptr<Node> _end_node;
-        std::shared_ptr<InputPort> _end_port;
+        std::string _id;
+        std::vector<std::shared_ptr<Command>> _commands;
 
-        int _render_id;
+        static json nodes_data;
+        static json createNodeMenu_data;
+
+        void renderCreateNodeMenu(json category_data);
+    protected:
+        void renderContents() override;
     public:
-        Link(std::shared_ptr<Node> start_node, 
-             std::shared_ptr<OutputPort> start_port, 
-             std::shared_ptr<Node> end_node, 
-             std::shared_ptr<InputPort> end_port);
-
-        std::shared_ptr<Node> start_node() { return _start_node; }
-        std::shared_ptr<OutputPort> start_port() { return _start_port; }
-        std::shared_ptr<Node> end_node() { return _end_node; }
-        std::shared_ptr<InputPort> end_port() { return _end_port; }
-
-        int render_id() { return _render_id; }
+        Graph(std::string id, std::string json_graph);
+        void createNode(std::string node_id);
+        static void registerNodes(std::string json_node_data);
 };

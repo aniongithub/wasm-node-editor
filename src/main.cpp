@@ -153,6 +153,24 @@ int init_imgui()
     initializeNodeEditor();
     registerNodes(R"(
     {
+        "foo": {
+            "properties": {
+                "bar": {
+                    "type": "float",
+                    "args": {
+                        "step": 0.0,
+                        "step_fast": 1.0,
+                        "format": "%.3f"
+                    }
+                },
+                "foobar": "string"
+            }
+        }
+    }
+    )");
+    
+    registerNodes(R"(
+    {
         "time": {
             "outputs": {
                 "time_sec": "float"
@@ -205,19 +223,6 @@ int init_imgui()
             },
             "outputs": {
                 "y": "float"
-            }
-        },
-        "foo": {
-            "properties": {
-                "bar": {
-                    "type": "float",
-                    "args": {
-                        "step": 0.0,
-                        "step_fast": 1.0,
-                        "format": "%.3f"
-                    }
-                },
-                "foobar": "string"
             }
         },
         "color": {

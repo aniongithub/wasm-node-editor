@@ -193,7 +193,7 @@ void Node::render()
 void Node::renderProperties()
 {
     auto node_name = name();
-    ImVec2 cell_padding(5, 5);
+    ImVec2 cell_padding(5, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
     if (ImGui::BeginTable(node_name.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable))
     {
