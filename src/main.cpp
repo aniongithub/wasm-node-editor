@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <map>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -7,19 +8,22 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <imnodes.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_opengl3.h>
 
-#include "node_editor.h"
+#include <imnodes/imnodes.h>
+
+#include <api.h>
 
 GLFWwindow *g_window;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-bool show_demo_window = true;
-bool show_another_window = false;
 int g_width;
 int g_height;
+
+
+Editor editor;
+std::map<std::string, Graph> graphs;
 
 #ifdef __EMSCRIPTEN__
 
@@ -60,11 +64,6 @@ void resize_canvas()
 
 #endif
 
-void glfw_error_callback(int error, const char* description)
-{
-    printf("GLFW error: %d - %s\n", error, description);
-}
-
 void on_size_changed()
 {
     glfwSetWindowSize(g_window, g_width, g_height);
@@ -89,7 +88,9 @@ void loop()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    renderNodeEditor();
+
+    auto result = renderEditor(editor);
+
     ImGui::Render();
 
     int display_w, display_h;
@@ -105,14 +106,12 @@ void loop()
 
 int init_gl()
 {
-    // glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
     {
         fprintf(stderr, "Failed to initialize GLFW\n");
         return 1;
     }
 
-    // glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -150,8 +149,18 @@ int init_imgui()
 
     resize_canvas();
     
-    initializeNodeEditor();
-    registerNodes(R"(
+    return 0;
+}
+
+int init()
+{
+    init_gl();
+    init_imgui();
+
+    EditorCallbacks editorCallbacks = {};
+    auto result = initializeEditor(editorCallbacks, EDITORFLAGS_NONE, &editor);
+
+    auto nodes_data = R"(
     {
         "foo": {
             "properties": {
@@ -167,145 +176,18 @@ int init_imgui()
             }
         }
     }
-    )");
-    
-    registerNodes(R"(
+    )";
+    result = registerNodes(editor, nodes_data, strlen(nodes_data));
+    // TODO: Continue here
+    GraphCallbacks graphCallbacks = {};
+    graphCallbacks.nodeCreated = [](void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl) -> EditorResult
     {
-        "time": {
-            "outputs": {
-                "time_sec": "float"
-            }
-        },
-        "functions/sine": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
-            },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/square": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "dutyCycle": "float",
-                "x": "float"
-            },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/sawtooth": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
-            },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/triangle": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
-            },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "color": {
-            "outputs": {
-                "color": {
-                    "type": "vec3",
-                    "editor": "color_picker",
-                    "args": {
-                        "pick_alpha": false
-                    }
-                }
-            },
-            "properties": {
-                "value": {
-                    "type": "vec3",
-                    "editor" : "color_picker",
-                    "editor_args": {
-                        "alpha": false
-                    }
-                }
-            }
-        },
-        "vec3split": {
-            "inputs": {
-                "vec": "any"
-            },
-            "outputs": {
-                "x": "float",
-                "y": "float",
-                "z": "float"
-            }
-        },
-        "const_float": {
-            "outputs": {
-                "value": "float"
-            },
-            "properties": {
-                "value": "float"
-            }
-        },
-        "math/add": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
-            },
-            "outputs": {
-                "result": "float"
-            }
-        },
-        "math/subtract": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
-            },
-            "outputs": {
-                "result": "float"
-            }
-        },
-        "math/multiply": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
-            },
-            "outputs": {
-                "result": "float"
-            }
-        },
-        "file/csv": {
-            "properties": {
-                "filename": "string",
-                "columns": "list[string]"
-            }
-        }
-    }
-    )");
+        return createNode(graphHdl, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+    };
+    Graph graph;
+    result = editGraph(editor, "misc/foo.bar", strlen("misc/foo.bar"), nullptr, 0, graphCallbacks, &graph);
+    graphs.insert({"foo.bar", graph});
 
-    return 0;
-}
-
-int init()
-{
-    init_gl();
-    init_imgui();
     return 0;
 }
 
@@ -313,7 +195,7 @@ void quit()
 {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    shutdownNodeEditor();
+
     glfwTerminate();
 }
 

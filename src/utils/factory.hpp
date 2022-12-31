@@ -9,7 +9,7 @@ template <typename TBase, typename... Args>
 class Factory
 {
     private:
-        std::map<std::string, std::function<std::unique_ptr<TBase>(Args... args)>> _registered;
+        std::map<std::string, std::function<TBase*(Args... args)>> _registered;
 
         Factory() {}
     public:
@@ -23,17 +23,17 @@ class Factory
         void operator=(Factory const&) = delete;
         
         template <typename TDerived>
-        void register_class(std::string id, std::function<std::unique_ptr<TBase>(Args... args)> createFunc)
+        void register_class(std::string id, std::function<TBase*(Args... args)> createFunc)
         {
             _registered[id] = createFunc;
         }
 
-        std::unique_ptr<TBase> create(std::string id, Args... args)
+        TBase* create(std::string id, Args... args)
         {
             auto it = _registered.find(id);
             if (it != _registered.end())
                 return it->second(args...);
             else
-                return std::make_unique<TBase>(args...);
+                return new TBase(args...);
         }
 };

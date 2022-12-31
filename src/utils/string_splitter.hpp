@@ -4,14 +4,6 @@
 #include <sstream>
 #include <vector>
 
-#include "imgui.h"
-
-template <typename T>
-T max(T a, T b)
-{
-    return a > b ? a : b;
-}
-
 template <char splitchar>
 class StringSplitter
 {
@@ -43,5 +35,3 @@ class StringSplitter
             return token;
         }
 };
-
-std::string generate_uuid_v4();

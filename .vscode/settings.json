@@ -6,5 +6,10 @@
         // // https://stackoverflow.com/questions/66329704/cmake-deprecation-warning-messagedeprecation-the-cmake-force-c-compiler-mac
         // "-Wno-deprecated"
     ],
-    "cmake.sourceDirectory": "${workspaceFolder}/native"
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/src",
+        "${env:IMGUI_ROOT}",
+        "${env:IMNODES_ROOT}",
+        "${env:JSON_ROOT}"
+    ]
 }
