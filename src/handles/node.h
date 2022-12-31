@@ -17,6 +17,7 @@ struct Node_t
         ImGuiID _renderId;
         std::string _typeId;
         bool _selected;
+        json _node_metadata;
 
         std::map<std::string, Property> _properties;
 
@@ -36,7 +37,7 @@ struct Node_t
         const ImGuiID renderId() { return _renderId; }
         static Node empty()
         {
-            static auto _empty = std::make_shared<Node_t>(nullptr, "", json());
+            static auto _empty = std::make_shared<Node_t>(nullptr, "", json::parse(R"({})"));
             return _empty.get();
         }
 

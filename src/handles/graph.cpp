@@ -143,7 +143,7 @@ EditorResult Graph_t::render()
 
 EditorResult Graph_t::createNode(std::string id, std::string json_node_metadata, Node* nodeHdl)
 {
-    auto node = new Node_t(this, id, json_node_metadata);
+    auto node = new Node_t(this, id, json::parse(json_node_metadata));
     auto result = node->prepare();
     if (result == RESULT_OK)
         _nodes.push_back(node);

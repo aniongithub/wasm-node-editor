@@ -29,10 +29,17 @@ std::string Node_t::getNewName()
 Node_t::Node_t(Graph parent, std::string typeId, json node_metadata):
     _parent(parent),
     _typeId(typeId),
-    _renderId(ImGui::GetID(this))
+    _renderId(ImGui::GetID(this)),
+    _node_metadata(node_metadata)
 {
     _properties.insert({"name", new Property_t(this, "name", json({{"type", "string"}, {"editor", "name_editor"}}))});
     _properties["name"]->setData<std::string>(getNewName());
+
+    auto x = _node_metadata.dump();
+    ImVec2 pos(100.0f, 100.0f);
+    pos.x = _node_metadata.value("pos_x", pos.x);
+    pos.y = _node_metadata.value("pos_y", pos.y);
+    ImNodes::SetNodeScreenSpacePos(renderId(), pos);
 }
 
 EditorResult Node_t::prepare()
@@ -75,14 +82,14 @@ EditorResult Node_t::render()
 
     std::string name(properties()["name"]->getData<char>());
 
+    // TODO: Continue here...
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted(name.c_str());
     ImNodes::EndNodeTitleBar();
 
     ImNodes::EndNode();
 
-    // TODO: Get nextNodePos from properties when done
-    // ImNodes::SetNodeScreenSpacePos(renderId(), nextNodePos);
+    // TODO: Get nextNodePos from properties when done    
     if (ImNodes::IsNodeSelected(_renderId))
         parent()->parent()->selectedNodes().push_back(this);
 
