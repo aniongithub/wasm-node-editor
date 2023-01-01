@@ -21,7 +21,7 @@ struct FloatEditor: PropertyEditor_t
         }
         EditorResult render()
         {
-            // ImGui::InputFloat(fullname().c_str(), _parent->getData<float>(), _step, _step_fast, _format.c_str());
+            ImGui::InputFloat(label().c_str(), parent()->getData<float>(), _step, _step_fast, _format.c_str());
             return RESULT_OK;
         }
 };
@@ -55,15 +55,12 @@ class StringEditor: public PropertyEditor_t
         EditorResult render()
         {
             auto oldName = std::string(parent()->getData<char>());
-            auto editor_name = ("##" + std::to_string(renderId())).c_str();
-            ImGui::PushItemWidth(-1);
-            if (ImGui::InputText(editor_name, 
+            if (ImGui::InputText(label().c_str(), 
                 parent()->getData<char>(), _length, ImGuiInputTextFlags_CallbackResize, 
                 resizeCallback, this))
             {
                 // Nothing to do here...
             }
-            ImGui::PopItemWidth();
 
             return RESULT_OK;
         }
@@ -104,16 +101,13 @@ class NameEditor: public PropertyEditor_t
                 _name_initialized = true;
             }
             
-            auto editor_name = ("##" + std::to_string(renderId())).c_str();
-            ImGui::PushItemWidth(-1);
-            if (ImGui::InputText(editor_name, &_tempName[0], _length, ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue, 
+            if (ImGui::InputText(label().c_str(), &_tempName[0], _length, ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue, 
                 resizeCallback, this))
             {
                 // printf("Old name was: %s, new name is %s\n", this->parent()->getData<char>(), this->_tempName.c_str());
                 auto currName = std::string(this->parent()->getData<char>());
                 this->parent()->setData(_tempName);
             }
-            ImGui::PopItemWidth();
             
             return RESULT_OK;
         }

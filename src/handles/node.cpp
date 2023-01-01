@@ -32,10 +32,15 @@ Node_t::Node_t(Graph parent, std::string typeId, json node_metadata):
     _renderId(ImGui::GetID(this)),
     _node_metadata(node_metadata)
 {
-    _properties.insert({"name", new Property_t(this, "name", json({{"type", "string"}, {"editor", "name_editor"}}))});
+    if (!parent)
+        return;
+    
+    auto nameProperty = new Property_t(this, "name", json({{"type", "string"}, {"editor", "name_editor"}}));
+    assert(nameProperty->prepare() == RESULT_OK);
+    
+    _properties.insert({"name", nameProperty});
     _properties["name"]->setData<std::string>(getNewName());
 
-    auto x = _node_metadata.dump();
     ImVec2 pos(100.0f, 100.0f);
     pos.x = _node_metadata.value("pos_x", pos.x);
     pos.y = _node_metadata.value("pos_y", pos.y);
@@ -44,21 +49,56 @@ Node_t::Node_t(Graph parent, std::string typeId, json node_metadata):
 
 EditorResult Node_t::prepare()
 {
-    // Prepare all properties
-    for (auto propIter = _properties.begin(); propIter != _properties.end(); propIter++)
-    {
-        auto result = propIter->second->prepare();
-        if (result != RESULT_OK)
-            return result;
-    }
+    auto it = Editor_t::getNodesData().find(_typeId.c_str());
+    if (it == Editor_t::getNodesData().end())
+        return RESULT_INVALID_ARGS;
+
+    auto nodeData = it.value();
     
+    if (nodeData.contains("inputs"))
+        {
+            for (auto i = nodeData["inputs"].begin(); i != nodeData["inputs"].end(); i++)
+            {
+                auto port = new InputPort_t(this, i.key(), i.value());
+                auto result = port->prepare();
+                if (result != RESULT_OK)
+                    return result;
+                
+                _inputs.insert({i.key(), port});
+            }
+        }
+    
+    if (nodeData.contains("outputs"))
+    {
+        for (auto o = nodeData["outputs"].begin(); o != nodeData["outputs"].end(); o++)
+        {
+            auto port = new OutputPort_t(this, o.key(), o.value());
+            auto result = port->prepare();
+            if (result != RESULT_OK)
+                return result;
+            
+            _outputs.insert({o.key(), port});
+        }
+    }
+    if (nodeData.contains("properties"))
+    {
+        for (auto p = nodeData["properties"].begin(); p != nodeData["properties"].end(); p++)
+        {
+            auto property = new Property_t(this, p.key(), p.value());
+            auto result = property->prepare();
+            if (result != RESULT_OK)
+                return result;
+            _properties.insert({p.key(), property});
+        }
+    }
+
     return RESULT_OK;
 }
 
 EditorResult Node_t::renderProperties()
 {
     auto node_name = std::string(_properties["name"]->getData<char>());
-    ImVec2 cell_padding(5, 0);
+    ImVec2 cell_padding(5, 3);
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
     if (ImGui::BeginTable(node_name.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable))
     {
@@ -82,14 +122,41 @@ EditorResult Node_t::render()
 
     std::string name(properties()["name"]->getData<char>());
 
-    // TODO: Continue here...
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted(name.c_str());
     ImNodes::EndNodeTitleBar();
 
+    ImVec2 cell_padding(10, 3);
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+    if (ImGui::BeginTable(name.c_str(), 2))
+    {
+        ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("outputs", ImGuiTableColumnFlags_WidthFixed);
+
+        auto input_it = _inputs.begin();
+        auto output_it = _outputs.begin();
+        for (auto i = 0; i < std::max(_inputs.size(), _outputs.size()); i++)
+        {
+            auto input = input_it != _inputs.end() ? *input_it++: std::make_pair("", InputPort_t::empty());
+            auto output = output_it != _outputs.end() ? *output_it++: std::make_pair("", OutputPort_t::empty());
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            input.second->render();
+            
+            ImGui::TableNextColumn();
+            // Right-align - https://stackoverflow.com/a/58052701/802203
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::CalcTextSize(output.second->name().c_str()).x 
+            - ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+            output.second->render();
+        }
+
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar();
+
     ImNodes::EndNode();
 
-    // TODO: Get nextNodePos from properties when done    
     if (ImNodes::IsNodeSelected(_renderId))
         parent()->parent()->selectedNodes().push_back(this);
 

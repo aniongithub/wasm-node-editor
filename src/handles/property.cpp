@@ -50,8 +50,10 @@ EditorResult Property_t::render()
     ImGui::TextUnformatted(_name.c_str());
     
     ImGui::TableNextColumn();
+    ImGui::PushItemWidth(-1);
     if (_editor)
         _editor->render();
+    ImGui::PopItemWidth();
     
     return RESULT_OK;
 }

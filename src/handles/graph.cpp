@@ -129,12 +129,12 @@ EditorResult Graph_t::render()
     ImGui::Begin(_id.c_str(), _allowClose? &_closed : nullptr, _windowFlags);
 
     ImNodes::BeginNodeEditor();
-    ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 
     auto result = renderContents();
     if (result != RESULT_OK)
         return result;
 
+    ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
     ImNodes::EndNodeEditor();
     ImGui::End();
     

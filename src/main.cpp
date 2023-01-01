@@ -168,11 +168,18 @@ int init()
                     "type": "float",
                     "args": {
                         "step": 0.0,
-                        "step_fast": 1.0,
+                        "step_fast": 0.5,
                         "format": "%.3f"
                     }
                 },
                 "foobar": "string"
+            },
+            "inputs": {
+                "arg1": "float",
+                "arg2": "float"
+            },
+            "outputs": {
+                "result": "float"
             }
         }
     }

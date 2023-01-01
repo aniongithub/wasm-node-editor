@@ -78,6 +78,7 @@ struct PropertyEditor_t
 
         Property parent() { return _parent; }
         ImGuiID renderId() { return _renderId; }
+        const std::string label() { return "##" + std::to_string(_renderId); }
 };
 typedef struct PropertyEditor_t* PropertyEditor;
 

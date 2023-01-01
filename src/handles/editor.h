@@ -34,4 +34,5 @@ struct Editor_t
         std::vector<Node>& selectedNodes() { return _selectedNodes; }
         
         static const json& getCreateNodeData() { return createNode_data; }
+        static const json& getNodesData() { return nodes_data; }
 };
