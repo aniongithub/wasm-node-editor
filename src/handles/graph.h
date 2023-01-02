@@ -22,7 +22,7 @@ struct Graph_t
         ImGuiWindowFlags _windowFlags;
         GraphCallbacks _callbacks;
         
-        EditorResult renderAddNodeMenu(json createNodeData);
+        EditorResult renderAddNodeMenu(json createNodeData, std::string currPath = "");
         EditorResult renderContents();
 
         std::vector<Node> _nodes;

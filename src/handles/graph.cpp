@@ -52,7 +52,7 @@ EditorResult Graph_t::prepare()
     return RESULT_OK;
 }
 
-EditorResult Graph_t::renderAddNodeMenu(json createNodeData)
+EditorResult Graph_t::renderAddNodeMenu(json createNodeData, std::string currPath)
 {
     for (auto it = createNodeData.begin(); it != createNodeData.end(); it++)
     {
@@ -66,7 +66,8 @@ EditorResult Graph_t::renderAddNodeMenu(json createNodeData)
                 if (_callbacks.nodeCreated)
                 {
                     Node node;
-                    auto result = _callbacks.nodeCreated(_callbacks.context, this, it.key().c_str(), it.key().size() + 1,
+                    auto id = currPath == "" ? it.key() : currPath + "/" + it.key();
+                    auto result = _callbacks.nodeCreated(_callbacks.context, this, id.c_str(), id.size() + 1,
                         metadata.c_str(), metadata.size() + 1, &node);
                     if (result != RESULT_OK)
                         return result;
@@ -77,7 +78,8 @@ EditorResult Graph_t::renderAddNodeMenu(json createNodeData)
         {
             if (ImGui::BeginMenu(it.key().c_str()))
             {
-                renderAddNodeMenu(it.value());
+                currPath = currPath == "" ? it.key() : currPath + "/" + it.key();
+                renderAddNodeMenu(it.value(), currPath);
                 ImGui::EndMenu();
             }
         }
