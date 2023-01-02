@@ -1,5 +1,7 @@
 #include "editor.h"
 
+#include <sstream>
+
 #include <handles/graph.h>
 #include <handles/node.h>
 

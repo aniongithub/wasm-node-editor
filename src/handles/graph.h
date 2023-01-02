@@ -33,6 +33,7 @@ struct Graph_t
 
         EditorResult prepare();
         EditorResult render();
+        EditorResult handleLinks();
         EditorResult shutdown();
 
         EditorResult createNode(std::string id, std::string json_node_metadata, Node* nodeHdl);

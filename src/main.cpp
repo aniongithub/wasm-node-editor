@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <map>
+#include <sstream>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -8,11 +9,11 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 
-#include <imnodes/imnodes.h>
+#include <imnodes.h>
 
 #include <api.h>
 

@@ -1,5 +1,6 @@
 #include "graph.h"
 
+#include <sstream>
 #include <imnodes.h>
 
 #include <handles/editor.h>
@@ -139,6 +140,12 @@ EditorResult Graph_t::render()
     ImGui::End();
     
     return RESULT_OK;
+}
+
+EditorResult Graph_t::handleLinks()
+{
+    // TODO: Continue here
+    return RESULT_NOT_IMPLEMENTED;
 }
 
 EditorResult Graph_t::createNode(std::string id, std::string json_node_metadata, Node* nodeHdl)
