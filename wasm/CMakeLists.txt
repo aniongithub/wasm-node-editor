@@ -8,7 +8,7 @@ add_executable(${PROJECT_NAME} "${SOURCES}")
 
 target_include_directories(${PROJECT_NAME} 
 PRIVATE 
-	${CMAKE_SOURCE_DIR}/src
+	${CMAKE_SOURCE_DIR}/../src
 	${OPENGL_INCLUDE_DIR}
 	$ENV{IMGUI_ROOT}
 	$ENV{IMNODES_ROOT}
