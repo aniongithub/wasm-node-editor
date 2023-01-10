@@ -38,5 +38,6 @@ struct Graph_t
 
         EditorResult createNode(std::string id, std::string json_node_metadata, Node* nodeHdl);
 
+        std::string id() { return _id; }
         Editor parent() { return _parent; }
 };

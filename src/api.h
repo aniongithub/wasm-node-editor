@@ -1,5 +1,16 @@
 #pragma once
 
+#include <stddef.h>
+
+#ifdef __EMSCRIPTEN__
+
+#include <emscripten.h>
+#include <emscripten/bind.h>
+
+using namespace emscripten;
+
+#endif
+
 enum EditorResult_t {
     RESULT_UNKNOWN_TYPE = -5,
     RESULT_NOT_SUPPORTED = -4,

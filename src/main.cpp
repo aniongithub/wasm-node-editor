@@ -16,6 +16,8 @@
 #include <imnodes.h>
 
 #include <api.h>
+#include <handles/graph.h>
+#include <handles/node.h>
 
 GLFWwindow *g_window;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -159,6 +161,28 @@ int init()
     init_imgui();
 
     EditorCallbacks editorCallbacks = {};
+    editorCallbacks.openGraph = [](void* context, Editor editorHdl, const char* id, size_t idSizeBytes) -> EditorResult 
+    {
+        // TODO: Execute the commands returned by the JS callback here in C++
+        #ifdef __EMSCRIPTEN__
+        EM_ASM(
+            {
+                onOpenGraph(UTF8ToString($0));
+            }, id);
+        #endif
+
+        return RESULT_OK;
+    };
+    editorCallbacks.closeGraph = [](void* context, Editor editorHdl, const char* id, size_t idSizeBytes, Graph graph) -> EditorResult
+    {
+        #ifdef __EMSCRIPTEN__
+        EM_ASM(
+            {
+                onCloseGraph(UTF8ToString($0));
+            }, id);
+        #endif
+        return RESULT_OK;
+    };
     auto result = initializeEditor(editorCallbacks, EDITORFLAGS_NONE, &editor);
 
     auto nodes_data = R"(
@@ -259,7 +283,15 @@ int init()
     GraphCallbacks graphCallbacks = {};
     graphCallbacks.nodeCreated = [](void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl) -> EditorResult
     {
-        return createNode(graphHdl, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+        auto result = createNode(graphHdl, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+        #ifdef __EMSCRIPTEN__
+        EM_ASM(
+            {
+                onNodeCreated(UTF8ToString($0), UTF8ToString($1), $2);
+            }, graphHdl->id().c_str(), id, (*nodeHdl)->renderId());
+
+        #endif
+        return result;
     };
     Graph graph;
     result = editGraph(editor, "misc/foo.bar", strlen("misc/foo.bar"), nullptr, 0, graphCallbacks, &graph);
