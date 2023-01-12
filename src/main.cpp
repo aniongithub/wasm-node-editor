@@ -16,6 +16,7 @@
 #include <imnodes.h>
 
 #include <api.h>
+#include <handles/editor.h>
 #include <handles/graph.h>
 #include <handles/node.h>
 
@@ -193,13 +194,43 @@ int init()
     init_imgui();
 
     EditorCallbacks editorCallbacks = {};
+    editorCallbacks.enumerateGraphs = [](void* context, Editor editorHdl) -> EditorResult
+    {
+        #ifdef __EMSCRIPTEN__
+        while (true)
+        {
+            char* str = (char*)EM_ASM_PTR(
+                {
+                    var jsStr = onEnumerateGraphs();
+                    if (jsStr == null)
+                        return null;
+                    
+                    var lengthBytes = lengthBytesUTF8(jsStr) + 1;
+                    var stringOnWasmHeap = _malloc(lengthBytes);
+                    stringToUTF8(jsStr, stringOnWasmHeap, lengthBytes);
+                    return stringOnWasmHeap;
+                });
+            if (str)
+            {
+                printf("Got non-null graph with data: %s\n", str);
+                registerGraphs(editorHdl, str, strlen(str));
+                free(str);
+            }
+            else
+            {
+                printf("got null graph, done enumerating nodes\n");
+                break;
+            }
+        }
+        #endif
+        return RESULT_OK;
+    };
     editorCallbacks.openGraph = [](void* context, Editor editorHdl, const char* id, size_t idSizeBytes) -> EditorResult 
     {
         // TODO: Execute the commands returned by the JS callback here in C++
         #ifdef __EMSCRIPTEN__
         char* str = (char*)EM_ASM_PTR(
             {
-                console.log("OpenGraph js callback invoked!");
                 var jsStr = onOpenGraph(UTF8ToString($0));
                 var lengthBytes = lengthBytesUTF8(jsStr) + 1;
                 var stringOnWasmHeap = _malloc(lengthBytes);
@@ -224,101 +255,103 @@ int init()
     };
     auto result = initializeEditor(editorCallbacks, EDITORFLAGS_NONE, &editor);
 
-    auto nodes_data = R"(
-    {
-        "time": {
-            "outputs": {
-                "time_sec": "float"
-            }
-        },
-        "functions/sine": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
+    #ifndef __EMSCRIPTEN__
+        auto nodes_data = R"(
+        {
+            "time": {
+                "outputs": {
+                    "time_sec": "float"
+                }
             },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/square": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "dutyCycle": "float",
-                "x": "float"
+            "functions/sine": {
+                "inputs": {
+                    "baseline": "float",
+                    "phase": "float",
+                    "amplitude": "float",
+                    "frequencyHz": "float",
+                    "x": "float"
+                },
+                "outputs": {
+                    "y": "float"
+                }
             },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/sawtooth": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
+            "functions/square": {
+                "inputs": {
+                    "baseline": "float",
+                    "phase": "float",
+                    "amplitude": "float",
+                    "frequencyHz": "float",
+                    "dutyCycle": "float",
+                    "x": "float"
+                },
+                "outputs": {
+                    "y": "float"
+                }
             },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "functions/triangle": {
-            "inputs": {
-                "baseline": "float",
-                "phase": "float",
-                "amplitude": "float",
-                "frequencyHz": "float",
-                "x": "float"
+            "functions/sawtooth": {
+                "inputs": {
+                    "baseline": "float",
+                    "phase": "float",
+                    "amplitude": "float",
+                    "frequencyHz": "float",
+                    "x": "float"
+                },
+                "outputs": {
+                    "y": "float"
+                }
             },
-            "outputs": {
-                "y": "float"
-            }
-        },
-        "math/const_float": {
-            "outputs": {
-                "value": "float"
+            "functions/triangle": {
+                "inputs": {
+                    "baseline": "float",
+                    "phase": "float",
+                    "amplitude": "float",
+                    "frequencyHz": "float",
+                    "x": "float"
+                },
+                "outputs": {
+                    "y": "float"
+                }
             },
-            "properties": {
-                "value": "float"
-            }
-        },
-        "math/add": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
+            "math/const_float": {
+                "outputs": {
+                    "value": "float"
+                },
+                "properties": {
+                    "value": "float"
+                }
             },
-            "outputs": {
-                "result": "float"
-            }
-        },
-        "math/subtract": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
+            "math/add": {
+                "inputs": {
+                    "a": "float",
+                    "b": "float"
+                },
+                "outputs": {
+                    "result": "float"
+                }
             },
-            "outputs": {
-                "result": "float"
-            }
-        },
-        "math/multiply": {
-            "inputs": {
-                "a": "float",
-                "b": "float"
+            "math/subtract": {
+                "inputs": {
+                    "a": "float",
+                    "b": "float"
+                },
+                "outputs": {
+                    "result": "float"
+                }
             },
-            "outputs": {
-                "result": "float"
+            "math/multiply": {
+                "inputs": {
+                    "a": "float",
+                    "b": "float"
+                },
+                "outputs": {
+                    "result": "float"
+                }
             }
         }
-    }
-    )";
-    result = registerNodes(editor, nodes_data, strlen(nodes_data));
-    // TODO: Continue here
+        )";
+        result = registerGraphs(editor, nodes_data, strlen(nodes_data));
+    #endif    
+
     GraphCallbacks graphCallbacks = {};
     graphCallbacks.nodeCreated = [](void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl) -> EditorResult
     {

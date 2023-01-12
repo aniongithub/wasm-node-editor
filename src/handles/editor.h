@@ -26,7 +26,7 @@ struct Editor_t
         Editor_t(const Editor_t&) = delete;
         Editor_t(EditorCallbacks& callbacks, EditorFlags flags);
 
-        EditorResult registerNodes(std::string json_data);
+        EditorResult registerGraphs(std::string json_data);
         EditorResult render();
 
         EditorResult editGraph(std::string id, std::string json_graph_data, GraphCallbacks callbacks, Graph* graphHdl);

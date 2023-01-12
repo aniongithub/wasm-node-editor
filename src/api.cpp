@@ -13,14 +13,14 @@ EditorResult initializeEditor(EditorCallbacks callbacks, EditorFlags flags, Edit
     return RESULT_OK;
 }
 
-EditorResult registerNodes(Editor editorHdl, const char* json_data, size_t json_dataSizeBytes)
+EditorResult registerGraphs(Editor editorHdl, const char* json_data, size_t json_dataSizeBytes)
 {
     if (!editorHdl ||
         !json_data ||
         (json_dataSizeBytes <= 0))
         return RESULT_INVALID_ARGS;
 
-    return editorHdl->registerNodes(std::string().assign(json_data, json_dataSizeBytes));
+    return editorHdl->registerGraphs(std::string().assign(json_data, json_dataSizeBytes));
 }
 
 EditorResult renderEditor(Editor editorHdl) 

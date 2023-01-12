@@ -1,3 +1,118 @@
+var graphs = 
+{
+    "time": {
+        "outputs": {
+            "time_sec": "float"
+        }
+    },
+    "functions/sine": {
+        "inputs": {
+            "baseline": "float",
+            "phase": "float",
+            "amplitude": "float",
+            "frequencyHz": "float",
+            "x": "float"
+        },
+        "outputs": {
+            "y": "float"
+        }
+    },
+    "functions/square": {
+        "inputs": {
+            "baseline": "float",
+            "phase": "float",
+            "amplitude": "float",
+            "frequencyHz": "float",
+            "dutyCycle": "float",
+            "x": "float"
+        },
+        "outputs": {
+            "y": "float"
+        }
+    },
+    "functions/sawtooth": {
+        "inputs": {
+            "baseline": "float",
+            "phase": "float",
+            "amplitude": "float",
+            "frequencyHz": "float",
+            "x": "float"
+        },
+        "outputs": {
+            "y": "float"
+        }
+    },
+    "functions/triangle": {
+        "inputs": {
+            "baseline": "float",
+            "phase": "float",
+            "amplitude": "float",
+            "frequencyHz": "float",
+            "x": "float"
+        },
+        "outputs": {
+            "y": "float"
+        }
+    },
+    "math/const_float": {
+        "outputs": {
+            "value": "float"
+        },
+        "properties": {
+            "value": "float"
+        }
+    },
+    "math/add": {
+        "inputs": {
+            "a": "float",
+            "b": "float"
+        },
+        "outputs": {
+            "result": "float"
+        }
+    },
+    "math/subtract": {
+        "inputs": {
+            "a": "float",
+            "b": "float"
+        },
+        "outputs": {
+            "result": "float"
+        }
+    },
+    "math/multiply": {
+        "inputs": {
+            "a": "float",
+            "b": "float"
+        },
+        "outputs": {
+            "result": "float"
+        }
+    }
+};
+
+function* graphEnumerator() {
+    for (let id in graphs) {
+        result = {}
+        result[id] = graphs[id]
+        yield JSON.stringify(result);
+    }
+}
+
+var graphGenerator = null;
+
+function onEnumerateGraphs() {
+    try {
+        if (graphGenerator == null)
+            graphGenerator = graphEnumerator();
+        return graphGenerator.next().value;
+    } catch (e) 
+    {
+        graphGenerator = null;
+        return null;
+    }
+}
+
 function onOpenGraph(graph_id) {
     console.log(`Graph ${graph_id} opened`);
     return "[]"

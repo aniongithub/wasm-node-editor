@@ -44,12 +44,14 @@ typedef struct InputPort_t* InputPort;
 struct OutputPort_t;
 typedef struct OutputPort_t* OutputPort;
 
+typedef EditorResult (*OnEnumerateGraphs)(void* context, Editor editorHdl);
 typedef EditorResult (*OnOpenGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes);
 typedef EditorResult (*OnCloseGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes, Graph graph);
 
 struct EditorCallbacks_t
 {
     void* context;
+    OnEnumerateGraphs enumerateGraphs;
     OnOpenGraph openGraph;
     OnCloseGraph closeGraph;
 };
@@ -81,6 +83,6 @@ EditorResult createNode(Graph graphHdl, const char* id, size_t idSizeBytes, cons
 EditorResult deleteNode(Graph graphHdl, Node node);
 
 EditorResult initializeEditor(EditorCallbacks callbacks, EditorFlags flags, Editor* editorHdl);
-EditorResult registerNodes(Editor editorHdl, const char* json_data, size_t json_dataSizeBytes);
+EditorResult registerGraphs(Editor editorHdl, const char* json_data, size_t json_dataSizeBytes);
 EditorResult renderEditor(Editor editorHdl);
 EditorResult shutdownEditor(Editor editorHdl);

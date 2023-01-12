@@ -12,9 +12,11 @@ Editor_t::Editor_t(EditorCallbacks& callbacks, EditorFlags flags):
     _callbacks(callbacks),
     _flags(flags)
 {
+    if (_callbacks.enumerateGraphs)
+        _callbacks.enumerateGraphs(_callbacks.context, this);
 }
 
-EditorResult Editor_t::registerNodes(std::string json_data)
+EditorResult Editor_t::registerGraphs(std::string json_data)
 {
     // TODO: Validate against a schema
     auto stream = std::stringstream(json_data);

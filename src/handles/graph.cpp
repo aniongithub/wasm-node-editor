@@ -49,7 +49,7 @@ EditorResult Graph_t::prepare()
                 continue;
             }
         }
-    
+
     return RESULT_OK;
 }
 
