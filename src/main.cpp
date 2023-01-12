@@ -94,6 +94,18 @@ void loop()
 
     auto result = renderEditor(editor);
 
+    #ifdef __EMSCRIPTEN__
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantSaveIniSettings)
+    {
+        EM_ASM(
+            {
+                localStorage.setItem("imgui_settings", UTF8ToString($0));
+            }, 
+            ImGui::SaveIniSettingsToMemory());
+    }
+    #endif
+
     ImGui::Render();
 
     int display_w, display_h;
@@ -144,6 +156,26 @@ int init_imgui()
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+    #ifdef __EMSCRIPTEN__
+    io.IniFilename = nullptr;
+    char* imgui_settings = (char*)EM_ASM_PTR(
+        {
+            if ("imgui_settings" in localStorage)
+            {
+                var settings_jsString = localStorage.getItem("imgui_settings");
+                var lengthBytes = lengthBytesUTF8(settings_jsString) + 1;
+                var stringOnWasmHeap = _malloc(lengthBytes);
+                stringToUTF8(settings_jsString, stringOnWasmHeap, lengthBytes);
+                return stringOnWasmHeap;
+            }
+        });
+    ImGui::LoadIniSettingsFromMemory(imgui_settings, strlen(imgui_settings));
+    free(imgui_settings);
+    #endif
+
+    #ifdef __EMSCRIPTEN__
+    #endif
+
     // Setup style
     ImGui::StyleColorsDark();
 
@@ -165,10 +197,17 @@ int init()
     {
         // TODO: Execute the commands returned by the JS callback here in C++
         #ifdef __EMSCRIPTEN__
-        EM_ASM(
+        char* str = (char*)EM_ASM_PTR(
             {
-                onOpenGraph(UTF8ToString($0));
+                console.log("OpenGraph js callback invoked!");
+                var jsStr = onOpenGraph(UTF8ToString($0));
+                var lengthBytes = lengthBytesUTF8(jsStr) + 1;
+                var stringOnWasmHeap = _malloc(lengthBytes);
+                stringToUTF8(jsStr, stringOnWasmHeap, lengthBytes);
+                return stringOnWasmHeap;
             }, id);
+        printf("string result from openGraph callback: %s\n", str);
+        free(str);
         #endif
 
         return RESULT_OK;
@@ -294,8 +333,11 @@ int init()
         return result;
     };
     Graph graph;
-    result = editGraph(editor, "misc/foo.bar", strlen("misc/foo.bar"), nullptr, 0, graphCallbacks, &graph);
-    graphs.insert({"foo.bar", graph});
+    result = editGraph(editor, "misc/foo", strlen("misc/foo"), nullptr, 0, graphCallbacks, &graph);
+    graphs.insert({"misc/foo", graph});
+
+    result = editGraph(editor, "misc/bar", strlen("misc/bar"), nullptr, 0, graphCallbacks, &graph);
+    graphs.insert({"misc/bar", graph});
 
     return 0;
 }

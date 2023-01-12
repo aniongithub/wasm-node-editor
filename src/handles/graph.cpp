@@ -1,7 +1,6 @@
 #include "graph.h"
 
 #include <sstream>
-#include <imnodes.h>
 
 #include <handles/editor.h>
 #include <handles/node.h>
@@ -23,6 +22,8 @@ Graph_t::Graph_t(Editor parent, std::string id, std::string json_graph_data, Gra
 
 EditorResult Graph_t::prepare()
 {
+    _editorCtx = ImNodes::EditorContextCreate();
+
     // TODO: Validate against a schema
     auto stream = std::stringstream(_json_graph_data);
     auto commands = json::parse(stream, nullptr, false);
@@ -131,6 +132,7 @@ EditorResult Graph_t::render()
 {
     ImGui::Begin(_id.c_str(), _allowClose? &_closed : nullptr, _windowFlags);
 
+    ImNodes::EditorContextSet(_editorCtx);
     ImNodes::BeginNodeEditor();
 
     auto result = renderContents();
@@ -164,5 +166,11 @@ EditorResult Graph_t::createNode(std::string id, std::string json_node_metadata,
 
 EditorResult Graph_t::shutdown()
 {
-    return RESULT_NOT_IMPLEMENTED;    
+    if (_editorCtx)
+    {
+        ImNodes::EditorContextFree(_editorCtx);
+        _editorCtx = nullptr;
+    }
+
+    return RESULT_OK;
 }

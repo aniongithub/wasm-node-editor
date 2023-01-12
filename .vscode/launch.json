@@ -34,7 +34,10 @@
                 "<node_internals>/**"
             ],
             "program": "server/server.js",
-            "preLaunchTask": "build wasm"
+            "preLaunchTask": "build wasm",
+            "env": {
+                "PORT": "8080"
+            }
         }
     ]
 }

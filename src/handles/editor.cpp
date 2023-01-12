@@ -55,6 +55,11 @@ EditorResult Editor_t::renderProperties()
     return RESULT_OK;
 }
 
+EditorResult Editor_t::renderMainMenu()
+{
+    return RESULT_NOT_IMPLEMENTED;    
+}
+
 EditorResult Editor_t::render()
 {
     ImGui::DockSpaceOverViewport();
@@ -75,6 +80,9 @@ EditorResult Editor_t::render()
 
 EditorResult Editor_t::editGraph(std::string id, std::string json_graph_data, GraphCallbacks callbacks, Graph* graphHdl)
 {
+    if (_callbacks.openGraph)
+        _callbacks.openGraph(_callbacks.context, this, id.c_str(), id.size());
+
     *graphHdl = new Graph_t(this, id, json_graph_data, callbacks);
     auto result = (*graphHdl)->prepare();
     if (result != RESULT_OK)

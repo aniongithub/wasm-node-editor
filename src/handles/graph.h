@@ -6,6 +6,7 @@
 #include "../api.h"
 
 #include <imgui.h>
+#include <imnodes.h>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -21,7 +22,9 @@ struct Graph_t
         bool _popup;
         ImGuiWindowFlags _windowFlags;
         GraphCallbacks _callbacks;
-        
+
+        ImNodesEditorContext* _editorCtx;
+
         EditorResult renderAddNodeMenu(json createNodeData, std::string currPath = "");
         EditorResult renderContents();
 

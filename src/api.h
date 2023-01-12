@@ -78,7 +78,7 @@ EditorResult editGraph(Editor editorHdl, const char* id, size_t idSizeBytes, con
 EditorResult closeGraph(Editor editorHdl, Graph graphHdl);
 
 EditorResult createNode(Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl);
-EditorResult deleteNode(Graph graphHdl, Node node); // TODO: Continue here and also add properties
+EditorResult deleteNode(Graph graphHdl, Node node);
 
 EditorResult initializeEditor(EditorCallbacks callbacks, EditorFlags flags, Editor* editorHdl);
 EditorResult registerNodes(Editor editorHdl, const char* json_data, size_t json_dataSizeBytes);

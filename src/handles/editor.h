@@ -20,6 +20,7 @@ struct Editor_t
         std::vector<Node> _selectedNodes;
 
         EditorResult renderProperties();
+        EditorResult renderMainMenu();
     public:
         Editor_t() = delete;
         Editor_t(const Editor_t&) = delete;
