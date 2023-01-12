@@ -72,6 +72,7 @@ EditorResult Editor_t::renderMainMenu()
             if (ImGui::MenuItem("Open recent"))
             {
                 // TODO: Load and render recents menu here...
+                // https://github.com/ocornut/imgui/issues/2564#issuecomment-493766526
             }
             ImGui::EndMenu();
         }

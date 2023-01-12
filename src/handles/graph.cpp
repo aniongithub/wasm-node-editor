@@ -12,7 +12,7 @@ Graph_t::Graph_t(Editor parent, std::string id, std::string json_graph_data, Gra
     _json_graph_data(json_graph_data),
     _callbacks(callbacks),
     _allowClose(true),
-    _closed(false),
+    _open(true),
     _popup(false),
     _windowFlags(ImGuiWindowFlags_None)
 {
@@ -130,18 +130,22 @@ EditorResult Graph_t::renderContents()
 
 EditorResult Graph_t::render()
 {
-    ImGui::Begin(_id.c_str(), _allowClose? &_closed : nullptr, _windowFlags);
+    if (_open)
+        if (ImGui::Begin(_id.c_str(), _allowClose? &_open : nullptr, _windowFlags))
+        {
+            ImNodes::EditorContextSet(_editorCtx);
+            ImNodes::BeginNodeEditor();
 
-    ImNodes::EditorContextSet(_editorCtx);
-    ImNodes::BeginNodeEditor();
+            auto result = renderContents();
+            if (result != RESULT_OK)
+                return result;
 
-    auto result = renderContents();
-    if (result != RESULT_OK)
-        return result;
-
-    ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
-    ImNodes::EndNodeEditor();
-    ImGui::End();
+            ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
+            ImNodes::EndNodeEditor();
+            ImGui::End();
+        }
+    else
+        ::closeGraph(parent(), this);
     
     return RESULT_OK;
 }

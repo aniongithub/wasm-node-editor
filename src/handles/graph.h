@@ -18,7 +18,7 @@ struct Graph_t
         std::string _id;
         std::string _json_graph_data;
         bool _allowClose;
-        bool _closed;
+        bool _open;
         bool _popup;
         ImGuiWindowFlags _windowFlags;
         GraphCallbacks _callbacks;
