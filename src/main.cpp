@@ -27,7 +27,6 @@ int g_height;
 
 
 Editor editor;
-std::map<std::string, Graph> graphs;
 
 #ifdef __EMSCRIPTEN__
 
@@ -365,12 +364,6 @@ int init()
         #endif
         return result;
     };
-    Graph graph;
-    result = editGraph(editor, "misc/foo", strlen("misc/foo"), nullptr, 0, graphCallbacks, &graph);
-    graphs.insert({"misc/foo", graph});
-
-    result = editGraph(editor, "misc/bar", strlen("misc/bar"), nullptr, 0, graphCallbacks, &graph);
-    graphs.insert({"misc/bar", graph});
 
     return 0;
 }

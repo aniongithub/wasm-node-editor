@@ -59,12 +59,86 @@ EditorResult Editor_t::renderProperties()
 
 EditorResult Editor_t::renderMainMenu()
 {
-    return RESULT_NOT_IMPLEMENTED;    
+    bool drawNewGraphPopup = false;
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Graph"))
+        {
+            if (ImGui::MenuItem("New...", "CTRL+N")) 
+            {
+                drawNewGraphPopup = true;
+            }
+            if (ImGui::MenuItem("Open...", "CTRL+O")) {}
+            if (ImGui::MenuItem("Open recent"))
+            {
+                // TODO: Load and render recents menu here...
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Edit"))
+        {
+            if (ImGui::MenuItem("Undo", "CTRL+Z", false, false)) {}
+            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "CTRL+X", false, false)) {}
+            if (ImGui::MenuItem("Copy", "CTRL+C", false, false)) {}
+            if (ImGui::MenuItem("Paste", "CTRL+V", false, false)) {}
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    if (drawNewGraphPopup)
+    {
+        ImGui::OpenPopup("Name");
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    }
+    if (ImGui::BeginPopupModal("Name", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        constexpr int bufSize = 256;
+        std::string id;
+        id.resize(bufSize);
+        
+        ImGui::Text("Id: ");
+        ImGui::SameLine();
+        bool enterPressed = ImGui::InputText(" ",
+            &id[0], bufSize, ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue, 
+            [](ImGuiInputTextCallbackData* data) -> int {
+                if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+                {
+                    auto str = static_cast<std::string*>(data->UserData);
+                    if (data->BufSize > str->size())
+                        str->resize(data->BufSize);
+                    data->Buf = &(*str)[0];
+                }
+                return 0;
+            },
+            &id);
+        ImGui::SetItemDefaultFocus();
+        if (ImGui::Button("OK") || enterPressed)
+        {
+            ImGui::CloseCurrentPopup(); 
+            GraphCallbacks callbacks = {0};
+            Graph graph;
+            auto result = editGraph(id, "", callbacks, &graph);
+            if (result != RESULT_OK)
+                return result;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) 
+            ImGui::CloseCurrentPopup(); 
+        ImGui::EndPopup();
+    }
+    return RESULT_OK;
 }
 
 EditorResult Editor_t::render()
 {
     ImGui::DockSpaceOverViewport();
+
+    renderMainMenu();
 
     _selectedNodes.clear();
 
