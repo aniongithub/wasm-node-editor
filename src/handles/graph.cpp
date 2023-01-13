@@ -131,8 +131,11 @@ EditorResult Graph_t::renderContents()
 EditorResult Graph_t::render()
 {
     if (_open)
+    {
         if (ImGui::Begin(_id.c_str(), _allowClose? &_open : nullptr, _windowFlags))
         {
+            _focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
             ImNodes::EditorContextSet(_editorCtx);
             ImNodes::BeginNodeEditor();
 
@@ -142,10 +145,15 @@ EditorResult Graph_t::render()
 
             ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
             ImNodes::EndNodeEditor();
-            ImGui::End();
         }
+
+        ImGui::End();
+
+    }
     else
+    {
         ::closeGraph(parent(), this);
+    }
     
     return RESULT_OK;
 }

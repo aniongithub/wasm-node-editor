@@ -158,7 +158,10 @@ EditorResult Node_t::render()
     ImNodes::EndNode();
 
     if (ImNodes::IsNodeSelected(_renderId))
-        parent()->parent()->selectedNodes().push_back(this);
+        if (parent()->focused())
+            parent()->parent()->selectedNodes().push_back(this);
+        else
+            ImNodes::ClearNodeSelection(renderId());
 
     return RESULT_OK;
 }

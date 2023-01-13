@@ -19,6 +19,7 @@ struct Graph_t
         std::string _json_graph_data;
         bool _allowClose;
         bool _open;
+        bool _focused;
         bool _popup;
         ImGuiWindowFlags _windowFlags;
         GraphCallbacks _callbacks;
@@ -43,4 +44,5 @@ struct Graph_t
 
         std::string id() { return _id; }
         Editor parent() { return _parent; }
+        bool focused() { return _focused; }
 };

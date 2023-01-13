@@ -122,6 +122,18 @@ EditorResult Editor_t::renderMainMenu()
         {
             ImGui::CloseCurrentPopup(); 
             GraphCallbacks callbacks = {0};
+            callbacks.nodeCreated = [](void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl) -> EditorResult
+            {
+                auto result = createNode(graphHdl, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+                #ifdef __EMSCRIPTEN__
+                EM_ASM(
+                    {
+                        onNodeCreated(UTF8ToString($0), UTF8ToString($1), $2);
+                    }, graphHdl->id().c_str(), id, (*nodeHdl)->renderId());
+
+                #endif
+                return result;
+            };
             Graph graph;
             auto result = editGraph(id, "", callbacks, &graph);
             if (result != RESULT_OK)
