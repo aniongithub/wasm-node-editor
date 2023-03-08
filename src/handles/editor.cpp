@@ -1,7 +1,10 @@
 #include "editor.h"
 
 #include <sstream>
+#include <vector>
+#include <regex>
 
+#include <api.h>
 #include <handles/graph.h>
 #include <handles/node.h>
 
@@ -12,8 +15,8 @@ Editor_t::Editor_t(EditorCallbacks& callbacks, EditorFlags flags):
     _callbacks(callbacks),
     _flags(flags)
 {
-    if (_callbacks.enumerateGraphs)
-        _callbacks.enumerateGraphs(_callbacks.context, this);
+    if (_callbacks.initialize)
+        _callbacks.initialize(_callbacks.context, this);
 }
 
 EditorResult Editor_t::registerGraphs(std::string json_data)
@@ -44,6 +47,17 @@ EditorResult Editor_t::registerGraphs(std::string json_data)
     return RESULT_OK;
 }
 
+bool Editor_t::node_exists(std::string id)
+{
+    for (auto it = Editor_t::nodes_data.begin(); it != Editor_t::nodes_data.end(); it++)
+    {
+        if (strcmp(it.key().c_str(), id.c_str()) == 0)
+            return true;
+    }
+    
+    return false;
+}
+
 EditorResult Editor_t::renderProperties()
 {
     ImGui::Begin("Properties");
@@ -57,110 +71,225 @@ EditorResult Editor_t::renderProperties()
     return RESULT_OK;
 }
 
-EditorResult Editor_t::renderMainMenu()
+EditorResult Editor_t::renderGraphTree(json nodeData, std::string currPath, std::string filter)
 {
-    bool drawNewGraphPopup = false;
-    if (ImGui::BeginMainMenuBar())
+    for (auto it = nodeData.begin(); it != nodeData.end(); it++)
     {
-        if (ImGui::BeginMenu("Graph"))
+        if (it.value().is_string())            
         {
-            if (ImGui::MenuItem("New...", "CTRL+N")) 
+            auto id = currPath == "" ? it.key() : currPath + "/" + it.key();
+            if (id.find(filter) != std::string::npos)
             {
-                drawNewGraphPopup = true;
+                ImGui::Selectable(it.key().c_str());
+                if (ImGui::BeginDragDropSource())
+                {
+                    ImGui::SetDragDropPayload(id.c_str(), nullptr, 0);
+                    ImGui::Text("%s", id.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+                {
+                    auto editable = nodes_data[id].value("editable", false);
+                    if (editable)
+                    {
+                        auto it = _graphs.find(id);
+                        if (it != _graphs.end())
+                        {
+                            _focusedWindow = id;
+                        }
+                        else
+                        {
+                            printf("Graph %s is not open, open it here\n", id.c_str());
+                            // TODO: Continue here, we need to figure out what callbacks need to be invoked because we may have instructions for it
+                            // editGraph(id, )
+                        }
+                    }
+                    else
+                    {
+                        printf("Graph %s is not editable!\n", id.c_str());
+                    }
+                }
             }
-            if (ImGui::MenuItem("Open...", "CTRL+O")) {}
-            if (ImGui::MenuItem("Open recent"))
-            {
-                // TODO: Load and render recents menu here...
-                // https://github.com/ocornut/imgui/issues/2564#issuecomment-493766526
-            }
-            ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Edit"))
+        
+        if (!it.value().is_string())
         {
-            if (ImGui::MenuItem("Undo", "CTRL+Z", false, false)) {}
-            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-            ImGui::Separator();
-            if (ImGui::MenuItem("Cut", "CTRL+X", false, false)) {}
-            if (ImGui::MenuItem("Copy", "CTRL+C", false, false)) {}
-            if (ImGui::MenuItem("Paste", "CTRL+V", false, false)) {}
-            ImGui::EndMenu();
+            ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+            if (ImGui::TreeNode(it.key().c_str()))
+            {
+                auto saveCurrPath = currPath;
+                currPath = currPath == "" ? it.key() : currPath + "/" + it.key();
+                renderGraphTree(it.value(), currPath, filter);
+                ImGui::TreePop();
+                currPath = saveCurrPath;
+            }
         }
-        ImGui::EndMainMenuBar();
     }
+    return RESULT_OK;
+}
 
-    if (drawNewGraphPopup)
+EditorResult Editor_t::renderGraphWindow()
+{
+    ImGui::Begin("Graphs");
+
+    ImGui::PushItemWidth(-1);
+    
+    ImGui::InputText("##search",
+        &_graphFilter[0], 256, ImGuiInputTextFlags_CallbackResize, 
+        [](ImGuiInputTextCallbackData* data) -> int {
+            if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+            {
+                auto str = static_cast<std::string*>(data->UserData);
+                if (data->BufSize > str->size())
+                    str->resize(data->BufSize);
+                data->Buf = &(*str)[0];
+            }
+            return 0;
+        },
+        &_graphFilter);
+    
+    auto newClicked = ImGui::Button("New...");
+    renderNewGraphDialog(newClicked);
+
+    renderGraphTree(createNode_data, "", _graphFilter.c_str());
+    
+    ImGui::PopItemWidth();
+
+    ImGui::End();
+
+    return RESULT_OK;
+}
+
+EditorResult Editor_t::graphNodeCreated(void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl)
+{
+    if (!graphHdl)
+        return RESULT_INVALID_ARGS;
+    return graphHdl->onNodeCreated(context, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+}
+
+EditorResult Editor_t::renderNewGraphDialog(bool renderDialog)
+{
+    if (renderDialog)
     {
-        ImGui::OpenPopup("Name");
+        ImGui::OpenPopup("New Graph");
         // Always center this window when appearing
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
-    if (ImGui::BeginPopupModal("Name", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+
+    bool graphExistsErrorPopup = false;
+    std::string new_id;
+
+    if (ImGui::BeginPopupModal("New Graph", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        constexpr int bufSize = 256;
-        std::string id;
-        id.resize(bufSize);
-        
         ImGui::Text("Id: ");
         ImGui::SameLine();
         bool enterPressed = ImGui::InputText(" ",
-            &id[0], bufSize, ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue, 
+            &new_id[0], 256, ImGuiInputTextFlags_CallbackResize | ImGuiInputTextFlags_EnterReturnsTrue, 
             [](ImGuiInputTextCallbackData* data) -> int {
                 if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
                 {
-                    auto str = static_cast<std::string*>(data->UserData);
+                    auto str = reinterpret_cast<std::string*>(data->UserData);
                     if (data->BufSize > str->size())
                         str->resize(data->BufSize);
-                    data->Buf = &(*str)[0];
+                    data->Buf = str->data();
                 }
                 return 0;
             },
-            &id);
-        ImGui::SetItemDefaultFocus();
+            &new_id);
         if (ImGui::Button("OK") || enterPressed)
         {
             ImGui::CloseCurrentPopup(); 
-            GraphCallbacks callbacks = {0};
-            callbacks.nodeCreated = [](void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl) -> EditorResult
-            {
-                auto result = createNode(graphHdl, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
-                #ifdef __EMSCRIPTEN__
-                EM_ASM(
-                    {
-                        onNodeCreated(UTF8ToString($0), UTF8ToString($1), $2);
-                    }, graphHdl->id().c_str(), id, (*nodeHdl)->renderId());
+            new_id = std::string(new_id.c_str());
 
-                #endif
-                return result;
-            };
-            Graph graph;
-            auto result = editGraph(id, "", callbacks, &graph);
-            if (result != RESULT_OK)
-                return result;
+            if (node_exists(new_id))
+            {
+                graphExistsErrorPopup = true;
+            }
+            else
+            {
+                GraphCallbacks callbacks = {0};
+                callbacks.nodeCreated = graphNodeCreated;
+                Graph graph;
+                auto result = editGraph(new_id, "[]", callbacks, &graph);
+                if (result != RESULT_OK)
+                    return result;
+                
+                // Add an empty graph 
+                json newGraph;
+                newGraph[new_id] = "{ \"editable\": true }"_json;
+                registerGraphs(newGraph.dump());
+            }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) 
+        if (ImGui::Button("Cancel"))
             ImGui::CloseCurrentPopup(); 
+
+        ImGui::EndPopup();
+    }
+    if (graphExistsErrorPopup)
+    {
+        ImGui::OpenPopup("Error");
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    }
+    if (ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextUnformatted("Graph already exists");
+        ImGui::TextUnformatted("");
+        ImGui::SetItemDefaultFocus();
+        if (ImGui::Button("Ok"))
+            ImGui::CloseCurrentPopup();
+        
         ImGui::EndPopup();
     }
     return RESULT_OK;
 }
 
+ImVec2 operator +(const ImVec2& a, const ImVec2& b)
+{
+    return ImVec2(a.x + b.x, a.y + b.y);
+}
+
+ImVec2 operator -(const ImVec2& a, const ImVec2& b)
+{
+    return ImVec2(a.x - b.x, a.y - b.y);
+}
+
+
 EditorResult Editor_t::render()
 {
     ImGui::DockSpaceOverViewport();
 
-    renderMainMenu();
-
+    renderGraphWindow();
+    
     _selectedNodes.clear();
 
-    for (auto graph: _graphs)
+    std::vector<Graph> closed;
+
+    for (auto it: _graphs)
     {
+        auto graph = it.second;
+
+        // Focus the requested graph
+        if (strcmp(_focusedWindow.c_str(), graph->id().c_str()) == 0)
+        {
+            ImGui::SetNextWindowFocus();
+            _focusedWindow = "";
+        }
+
         auto result = graph->render();
+
         if (result != RESULT_OK)
             return result;
+        
+        // Add any hidden graphs to a vector to be closed
+        if (!graph->open())
+            closed.push_back(graph);
     }
+
+    for (auto c: closed)
+        closeGraph(c);
 
     renderProperties();
 
@@ -180,7 +309,7 @@ EditorResult Editor_t::editGraph(std::string id, std::string json_graph_data, Gr
         *graphHdl = nullptr;
     }
 
-    _graphs.push_back(*graphHdl);
+    _graphs[id] = *graphHdl;
     return result;
 }
 
@@ -189,12 +318,12 @@ EditorResult Editor_t::closeGraph(Graph graphHdl)
     if (!graphHdl)
         return RESULT_INVALID_ARGS;
     
-    auto it = std::find(_graphs.begin(), _graphs.end(), graphHdl);
+    auto it = _graphs.find(graphHdl->id());
     if (it == _graphs.end())
         return RESULT_INVALID_ARGS;
 
     graphHdl->shutdown();
-    _graphs.erase(it);
+    _graphs.erase(graphHdl->id());
     
     delete graphHdl;
     return RESULT_OK;

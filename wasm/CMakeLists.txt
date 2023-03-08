@@ -16,6 +16,7 @@ PRIVATE
 
 target_sources(${PROJECT_NAME}
 PRIVATE
+	"callbacks_wasm.cpp"
 	"$ENV{IMGUI_ROOT}/imgui.cpp"
 	"$ENV{IMGUI_ROOT}/imgui_draw.cpp"
 	"$ENV{IMGUI_ROOT}/imgui_widgets.cpp"

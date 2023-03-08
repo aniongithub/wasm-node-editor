@@ -20,16 +20,17 @@ struct Graph_t
         bool _allowClose;
         bool _open;
         bool _focused;
+        bool _dirty;
         bool _popup;
         ImGuiWindowFlags _windowFlags;
         GraphCallbacks _callbacks;
+        std::vector<Node> _nodes;
 
         ImNodesEditorContext* _editorCtx;
 
         EditorResult renderAddNodeMenu(json createNodeData, std::string currPath = "");
         EditorResult renderContents();
 
-        std::vector<Node> _nodes;
     public:
         Graph_t() = delete;
         Graph_t(const Graph_t&) = delete;
@@ -42,7 +43,10 @@ struct Graph_t
 
         EditorResult createNode(std::string id, std::string json_node_metadata, Node* nodeHdl);
 
+        virtual EditorResult onNodeCreated(void* context, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl);
+
         std::string id() { return _id; }
         Editor parent() { return _parent; }
         bool focused() { return _focused; }
+        bool open() { return _open; }
 };

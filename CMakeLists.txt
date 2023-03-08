@@ -8,12 +8,12 @@ add_subdirectory(native)
 
 # add_subdirectory(wasm)
 
-include(ExternalProject)
-ExternalProject_Add(node-editor-wasm
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/wasm
-    CMAKE_ARGS
-    "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/emscripten.cmake"
-    "-DEMSCRIPTEN_ROOT_PATH=/usr/local/src/emsdk/upstream/emscripten"
-    "-Wno-deprecated"
-    BUILD_COMMAND $(MAKE) --silent
-    INSTALL_COMMAND "")
+# include(ExternalProject)
+# ExternalProject_Add(node-editor-wasm
+#     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/wasm
+#     CMAKE_ARGS
+#     "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/emscripten.cmake"
+#     "-DEMSCRIPTEN_ROOT_PATH=/usr/local/src/emsdk/upstream/emscripten"
+#     "-Wno-deprecated"
+#     BUILD_COMMAND $(MAKE) --silent
+#     INSTALL_COMMAND "")

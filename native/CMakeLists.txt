@@ -15,6 +15,7 @@ PRIVATE
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ../src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES}
+	"callbacks_native.cpp"
 	"$ENV{IMGUI_ROOT}/imgui.cpp"
 	"$ENV{IMGUI_ROOT}/imgui_draw.cpp"
 	"$ENV{IMGUI_ROOT}/imgui_widgets.cpp"

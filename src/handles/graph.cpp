@@ -20,6 +20,19 @@ Graph_t::Graph_t(Editor parent, std::string id, std::string json_graph_data, Gra
     ImNodes::SetNodeGridSpacePos(1, ImVec2(200.0f, 200.0f));
 }
 
+EditorResult Graph_t::onNodeCreated(void* context, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl)
+{
+    auto result = ::createNode(this, id, idSizeBytes, json_node_metadata, json_node_medataSizeBytes, nodeHdl);
+    #ifdef __EMSCRIPTEN__
+    EM_ASM(
+        {
+            onNodeCreated(UTF8ToString($0), UTF8ToString($1), $2);
+        }, this->id().c_str(), id, (*nodeHdl)->renderId());
+
+    #endif
+    return result;
+}
+
 EditorResult Graph_t::prepare()
 {
     _editorCtx = ImNodes::EditorContextCreate();
@@ -118,6 +131,8 @@ EditorResult Graph_t::renderContents()
 
     #pragma endregion
 
+    // TODO: Continue here, accept the dragdrop
+
     #pragma region Render nodes
 
     for (auto& node: _nodes)
@@ -132,6 +147,7 @@ EditorResult Graph_t::render()
 {
     if (_open)
     {
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(_id.c_str(), _allowClose? &_open : nullptr, _windowFlags))
         {
             _focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
@@ -150,10 +166,10 @@ EditorResult Graph_t::render()
         ImGui::End();
 
     }
-    else
-    {
-        ::closeGraph(parent(), this);
-    }
+    // else
+    // {
+    //     ::closeGraph(parent(), this);
+    // }
     
     return RESULT_OK;
 }

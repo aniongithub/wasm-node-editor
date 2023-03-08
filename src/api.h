@@ -44,16 +44,18 @@ typedef struct InputPort_t* InputPort;
 struct OutputPort_t;
 typedef struct OutputPort_t* OutputPort;
 
-typedef EditorResult (*OnEnumerateGraphs)(void* context, Editor editorHdl);
-typedef EditorResult (*OnOpenGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes);
-typedef EditorResult (*OnCloseGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes, Graph graph);
+typedef EditorResult (*OnEditorInitialize)(void* context, Editor editorHdl);
+typedef EditorResult (*OnEditorOpenGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes);
+typedef EditorResult (*OnEditorCloseGraph)(void* context, Editor editorHdl, const char* id, size_t idSizeBytes, Graph graph);
+typedef EditorResult (*OnEditorShutdown)(void* context, Editor editorHdl);
 
 struct EditorCallbacks_t
 {
     void* context;
-    OnEnumerateGraphs enumerateGraphs;
-    OnOpenGraph openGraph;
-    OnCloseGraph closeGraph;
+    OnEditorInitialize initialize;
+    OnEditorShutdown shutdown;
+    OnEditorOpenGraph openGraph;
+    OnEditorCloseGraph closeGraph;
 };
 typedef struct EditorCallbacks_t EditorCallbacks;
 
@@ -61,21 +63,22 @@ struct Link_t;
 typedef struct Link_t* Link;
 EditorResult getLinkInfo(Link linkHdl, Node* startNodeHdl, OutputPort* startPortHdl, Node* endNodeHdl, InputPort* endPortHdl);
 
-typedef EditorResult (*OnClosed)(void* context, Graph graphHdl);
-typedef EditorResult (*OnNodeCreated)(void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl);
-typedef EditorResult (*OnNodeDeleted)(void* context, Graph graphHdl, Node nodeHdl);
-typedef EditorResult (*OnLinkCreated)(void* context, Graph graphHdl, const char* json_link_metadata, size_t json_link_metadataSizeBytes, Link* linkHdl);
-typedef EditorResult (*OnLinkDeleted)(void* context, Graph graphHdl, Link linkHdl);
+typedef EditorResult (*OnGraphClosed)(void* context, Graph graphHdl);
+typedef EditorResult (*OnGraphNodeCreated)(void* context, Graph graphHdl, const char* id, size_t idSizeBytes, const char* json_node_metadata, size_t json_node_medataSizeBytes, Node* nodeHdl);
+typedef EditorResult (*OnGraphNodeDeleted)(void* context, Graph graphHdl, Node nodeHdl);
+typedef EditorResult (*OnGraphLinkCreated)(void* context, Graph graphHdl, const char* json_link_metadata, size_t json_link_metadataSizeBytes, Link* linkHdl);
+typedef EditorResult (*OnGraphLinkDeleted)(void* context, Graph graphHdl, Link linkHdl);
 
 struct GraphCallbacks_t
 {
     void* context;
-    OnNodeCreated nodeCreated;
-    OnNodeDeleted nodeDeleted;
-    OnLinkCreated linkCreated;
-    OnLinkDeleted linkDeleted;
+    OnGraphNodeCreated nodeCreated;
+    OnGraphNodeDeleted nodeDeleted;
+    OnGraphLinkCreated linkCreated;
+    OnGraphLinkDeleted linkDeleted;
 };
 typedef GraphCallbacks_t GraphCallbacks;
+// TODO: This should be renamed to openGraph
 EditorResult editGraph(Editor editorHdl, const char* id, size_t idSizeBytes, const char* json_graph_data, size_t json_graph_dataSizeBytes, GraphCallbacks callbacks, Graph* graphHdl);
 EditorResult closeGraph(Editor editorHdl, Graph graphHdl);
 
