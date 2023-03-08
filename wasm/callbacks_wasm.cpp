@@ -1,5 +1,7 @@
 #include <emscripten.h>
 #include <api.h>
+#include <handles/graph.h>
+#include <handles/node.h>
 
 EditorResult editorInitialize(void* context, Editor editorHdl)
 {
